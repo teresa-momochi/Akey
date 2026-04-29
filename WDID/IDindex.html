@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阿奇線上教學工作室 - 筆電專用 word puzzle</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { 
+            --primary: #8d6e63; 
+            --accent: #e67e22; 
+            --grid-bg: #f5f0e6; 
+            --bg: #fafafa;
+            --found: #2ecc71;
+            --control-bg: #fff3e0;
+            --info-bg: #e8f4fd;
+            --info-border: #3498db;
+        }
+        
+        body { font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; min-height: 100vh; color: var(--primary); }
+        
+        .instruction-panel {
+            width: 95%; max-width: 900px; margin-bottom: 20px; padding: 15px 25px;
+            background: var(--info-bg); border: 2px dashed var(--info-border);
+            border-radius: 15px; color: #2c3e50; font-size: 16px; line-height: 1.6;
+        }
+
+        #instruction-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .start-btn { background: var(--primary); color: white; border: none; padding: 15px 60px; font-size: 24px; font-weight: bold; border-radius: 50px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        /* 鐵律：結構封印 - 保留阿奇浮水印 */
+        .steel-stamp-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; z-index: 9999; opacity: 0.08; transform: rotate(-25deg); user-select: none; }
+        .steel-stamp-text { font-size: 250px; font-weight: 900; color: #a8d8ea; text-transform: uppercase; }
+
+        .teacher-control { 
+            width: 95%; max-width: 900px; margin-bottom: 30px; padding: 25px; 
+            background: var(--control-bg); border: 3px solid var(--accent); 
+            border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .teacher-control textarea { width: 100%; height: 100px; margin: 10px 0; border-radius: 12px; border: 1px solid #ccc; padding: 12px; font-size: 16px; font-family: monospace; }
+        
+        .update-btn { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 50px; cursor: pointer; font-weight: bold; width: 100%; font-size: 20px; box-shadow: 0 4px 0 #d35400; transition: 0.1s; }
+        .update-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #d35400; }
+
+        .main-content { width: 100%; max-width: 1000px; }
+        .game-container { display: flex; flex-direction: row; justify-content: center; align-items: flex-start; gap: 30px; }
+        
+        #grid { 
+            display: grid; grid-template-columns: repeat(12, 45px); gap: 6px; 
+            background: var(--grid-bg); padding: 20px; border-radius: 15px; 
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        
+        .cell { 
+            width: 45px; height: 45px; background: #ffffff; display: flex; justify-content: center; align-items: center; 
+            font-weight: 700; font-size: 22px; cursor: pointer; border-radius: 8px; transition: 0.2s; 
+            border: 1px solid #e0e0e0; user-select: none; box-shadow: 0 3px 0 #d7ccc8;
+        }
+        .cell:hover { background: #fff8e1; transform: translateY(-2px); box-shadow: 0 5px 0 #d7ccc8; }
+        .cell.selected { background: var(--accent); color: white; border-color: #d35400; box-shadow: 0 3px 0 #a04000; }
+        .cell.found { background: var(--found); color: white; border-color: #27ae60; box-shadow: 0 3px 0 #1e8449; }
+        .cell.answer-key { background: #ff69b4; color: white; border-color: #c2185b; box-shadow: 0 3px 0 #880e4f; }
+        
+        @keyframes hint-blink { 0%, 100% { background: white; } 50% { background: #ffeaa7; } }
+        .hint-blink { animation: hint-blink 0.8s infinite; }
+        
+        .panel { background: white; padding: 25px; border-radius: 20px; width: 360px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .word-item { display: flex; align-items: center; margin: 10px 0; font-size: 19px; padding: 8px; border-bottom: 1px dashed #eee; justify-content: space-between; transition: 0.2s; }
+        .word-item:hover { background: #fdfdfd; }
+        .check-box { width: 22px; height: 22px; border: 2px solid var(--primary); border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .word-info { display: flex; align-items: center; cursor: pointer; flex: 1; }
+        .btn-reveal { background: #f5f5f5; border: none; cursor: pointer; font-size: 18px; padding: 5px 10px; border-radius: 8px; transition: 0.2s; }
+        .btn-reveal:hover { background: #eee; transform: scale(1.1); }
+        .word-item.completed { color: #bbb; }
+        .word-item.completed .check-box { background: var(--found); border-color: var(--found); }
+        .word-item.completed .check-box::after { content: '✓'; color: white; font-weight: bold; font-size: 16px; }
+
+        .music-btn { width: 100%; padding: 10px; margin-top: 15px; background: #e3f2fd; border: 1px solid #2196f3; border-radius: 10px; cursor: pointer; font-weight: bold; color: #1976d2; }
+        .music-btn.off { background: #f5f5f5; border-color: #bdbdbd; color: #757575; }
+
+        #finish-section { display: none; width: 100%; max-width: 900px; margin-top: 50px; text-align: center; background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 8px solid var(--found); }
+        
+        /* 登入區外掛樣式 */
+        .login-box { margin-bottom: 20px; text-align: center; background: #fff3e0; padding: 20px; border-radius: 15px; border: 1px solid #e67e22; width: 300px; }
+        .login-box input { width: 80%; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <audio id="bgMusic" loop><source src="bg_music.mp3" type="audio/mpeg"></audio>
+    <audio id="popSound"><source src="pop.mp3" type="audio/mpeg"></audio>
+    <audio id="cheerSound"><source src="cheer.mp3" type="audio/mpeg"></audio>
+
+    <div id="instruction-overlay">
+        <div style="margin-bottom: 25px; color: #5d4037; line-height: 2; font-size: 1.4em; font-weight: bold;">
+            <p>💡 阿奇線上教學工作室 - 筆電專用版</p>
+            <p>🖱️ 拼字連線：點選第一個字母 and 最後一個字母</p>
+            <p>🔍 提示功能：點擊右側單字聽發音與提示</p>
+        </div>
+
+        <div class="login-box">
+            <input type="text" id="loginID" placeholder="請輸入老師帳號">
+            <input type="password" id="loginPWD" placeholder="請輸入密碼">
+        </div>
+
+        <button class="start-btn" onclick="startGame()">START GAME</button>
+    </div>
+
+    <div class="instruction-panel">
+        💡 <b>筆電版提示：</b>您可以按住 Ctrl + 滾輪來調整網格大小，達到最舒適的教學視覺效果。
+    </div>
+
+    <div class="steel-stamp-overlay"><div class="steel-stamp-text">Akey</div></div>
+
+    <div class="teacher-control">
+        <h3 style="margin:0; color: var(--accent);">🛠 老師設定面板 (PC版)</h3>
+        <textarea id="customWords">bathroom,浴室
+bedroom,臥室
+diningroom,餐廳
+livingroom,客廳
+kitchen,廚房
+yard,院子
+where,在哪裡</textarea>
+        <button class="update-btn" onclick="updateWords()">✨ 更新單字並同步雲端</button>
+    </div>
+
+    <div class="main-content">
+        <div class="game-container">
+            <div id="grid"></div>
+            <div class="panel">
+                <h3 style="margin-top:0">單字清單</h3>
+                <div id="word-ui-list"></div>
+                <p id="round-counter" style="color: var(--accent); font-weight: bold; font-size: 1.2em; border-top: 1px solid #eee; padding-top: 15px;">練習回合：1</p>
+                <button style="width:100%;padding:12px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:10px;" onclick="restartRound()">重新排列網格</button>
+                
+                <button id="musicToggle" class="music-btn" onclick="toggleMusic()">🌊 背景流水聲：開啟</button>
+            </div>
+        </div>
+
+        <div id="finish-section">
+            <h2 style="color: var(--found);">🎉 太棒了！全部找齊了！</h2>
+            <p style="font-size: 1.5em; font-weight: bold;">Excellent Job!</p>
+            <button class="start-btn" style="padding: 10px 40px; font-size: 18px;" onclick="restartRound()">再玩一次</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB1u_JTPcJ_fyyAo4dO191-MEhVWsNf2ps",
+            authDomain: "akey-studio.firebaseapp.com",
+            projectId: "akey-studio",
+            storageBucket: "akey-studio.firebasestorage.app",
+            messagingSenderId: "361645901281",
+            appId: "1:361645901281:web:c171c7f8d2343bd0453ea0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // 鐵律：將 TEACHER_ID 改為動態取得
+        let TEACHER_ID = ""; 
+
+        let WORD_MAP = [], WORDS = [], SIZE = 12, gridData = [], wordPaths = {}, foundWords = new Set(), startCell = null, roundCount = 1;
+
+        // --- 功能外掛：老師身份驗證 ---
+        async function verifyTeacher(id, pwd) {
+            try {
+                const docSnap = await getDoc(doc(db, "teachers", id));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.password === pwd) {
+                        return true;
+                    } else {
+                        alert("密碼錯誤！");
+                        return false;
+                    }
+                } else {
+                    alert("帳號不存在！");
+                    return false;
+                }
+            } catch (e) {
+                console.error("驗證失敗", e);
+                return false;
+            }
+        }
+
+        // --- 邏輯增補：修改原本的 startGame ---
+        window.startGame = async function() { 
+            const idInput = document.getElementById('loginID').value.trim();
+            const pwdInput = document.getElementById('loginPWD').value.trim();
+            
+            if (!idInput || !pwdInput) {
+                alert("請輸入帳號與密碼！");
+                return;
+            }
+
+            const isVerified = await verifyTeacher(idInput, pwdInput);
+            if (!isVerified) return;
+
+            TEACHER_ID = idInput; // 驗證成功，賦予 ID
+
+            await checkAuthAndLoad();
+            
+            document.getElementById('instruction-overlay').style.display = 'none'; 
+            const music = document.getElementById('bgMusic');
+            music.volume = 0.5; 
+            music.play().catch(e => {});
+            speak("Welcome to the word puzzle!");
+            updateWords();
+        };
+
+        window.toggleMusic = function() {
+            const music = document.getElementById('bgMusic');
+            const btn = document.getElementById('musicToggle');
+            if (music.paused) { music.play(); btn.innerText = "🌊 背景流水聲：開啟"; btn.classList.remove('off'); } 
+            else { music.pause(); btn.innerText = "🔇 背景流水聲：已關閉"; btn.classList.add('off'); }
+        };
+
+        window.restartRound = function() {
+            roundCount++;
+            document.getElementById('round-counter').innerText = `練習回合：${roundCount}`;
+            initGame();
+        };
+
+        window.updateWords = function() {
+            const text = document.getElementById('customWords').value.trim();
+            const newMap = text.split('\n').map(line => {
+                const parts = line.split(',');
+                return parts.length === 2 ? { en: parts[0].trim().toLowerCase().replace(/[^a-z]/g, ''), zh: parts[1].trim() } : null;
+            }).filter(i => i);
+            if(newMap.length > 0) { 
+                WORD_MAP = newMap; 
+                initGame(); 
+                saveToCloud(text);
+            }
+        };
+
+        function initGame() {
+            WORDS = WORD_MAP.map(i => i.en);
+            gridData = Array(SIZE).fill().map(() => Array(SIZE).fill(''));
+            wordPaths = {}; foundWords = new Set(); startCell = null;
+            
+            const dirs = [[0,1],[1,0],[1,1],[0,-1],[-1,0],[-1,-1],[1,-1],[-1,1]];
+            [...WORDS].sort((a,b) => b.length - a.length).forEach(word => {
+                let placed = false, attempts = 0;
+                while(!placed && attempts < 200){
+                    const d = dirs[Math.floor(Math.random()*dirs.length)], r = Math.floor(Math.random()*SIZE), c = Math.floor(Math.random()*SIZE);
+                    if(canPlace(word,r,c,d)){
+                        let path = [];
+                        for(let i=0;i<word.length;i++) {
+                            gridData[r+i*d[0]][c+i*d[1]] = word[i];
+                            path.push({r: r+i*d[0], c: c+i*d[1]});
+                        }
+                        wordPaths[word] = path; placed = true;
+                    }
+                    attempts++;
+                }
+            });
+            for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(!gridData[r][c]) gridData[r][c] = String.fromCharCode(97+Math.floor(Math.random()*26));
+            render();
+            document.getElementById('finish-section').style.display = 'none';
+        }
+
+        function canPlace(w,r,c,d){
+            for(let i=0;i<w.length;i++){
+                const nr=r+i*d[0], nc=c+i*d[1];
+                if(nr<0||nr>=SIZE||nc<0||nc>=SIZE||(gridData[nr][nc]&&gridData[nr][nc]!==w[i])) return false;
+            }
+            return true;
+        }
+
+        function render(){
+            const g = document.getElementById('grid'); g.innerHTML = '';
+            for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+                const div = document.createElement('div'); div.className='cell'; div.textContent=gridData[r][c];
+                div.onclick=()=>handleSelect(r,c,div); div.dataset.r=r; div.dataset.c=c;
+                g.appendChild(div);
+            }
+            const l = document.getElementById('word-ui-list'); l.innerHTML = '';
+            WORD_MAP.forEach(item => {
+                const div = document.createElement('div'); div.className = 'word-item'; div.id = `box-${item.en}`;
+                div.innerHTML = `<div class="word-info" onclick="toggleHint('${item.en}')"><div class="check-box"></div><strong>${item.en}</strong> <small style="margin-left:5px;">(${item.zh})</small></div><button class="btn-reveal" onclick="revealAnswer('${item.en}')">🔍</button>`;
+                l.appendChild(div);
+            });
+        }
+
+        // --- 邏輯增補：在 handleSelect 內部維持核心功能 ---
+        function handleSelect(r, c, el) {
+            if (!startCell) { startCell = { r, c, el }; el.classList.add('selected'); } 
+            else {
+                const r1 = startCell.r, c1 = startCell.c, dr = Math.abs(r - r1), dc = Math.abs(c - c1), dist = Math.max(dr, dc);
+                if (dist > 0 && (dr === 0 || dc === 0 || dr === dc)) {
+                    const sr = (r - r1) / dist, sc = (c - c1) / dist;
+                    let str = "", path = [];
+                    for (let i = 0; i <= dist; i++) {
+                        const currR = Math.round(r1 + i * sr), currC = Math.round(c1 + i * sc);
+                        str += gridData[currR][currC]; path.push({ r: currR, c: currC });
+                    }
+                    if (WORDS.includes(str) && !foundWords.has(str)) {
+                        path.forEach(p => {
+                            const cell = document.querySelector(`.cell[data-r='${p.r}'][data-c='${p.c}']`);
+                            cell.classList.remove('selected', 'answer-key', 'hint-blink');
+                            cell.classList.add('found');
+                        });
+                        markFound(str); speak(str);
+                    }
+                }
+                startCell.el.classList.remove('selected'); startCell = null;
+            }
+        }
+
+        // --- 邏輯增補：在 markFound 內部維持核心功能 ---
+        function markFound(word) {
+            foundWords.add(word);
+            document.getElementById(`box-${word}`).classList.add('completed');
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('hint-blink'));
+            document.getElementById('popSound').play();
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors: ['#8d6e63', '#e67e22', '#2ecc71'] });
+            if(foundWords.size === WORDS.length) {
+                document.getElementById('cheerSound').play();
+                document.getElementById('finish-section').style.display = 'block';
+                setTimeout(() => speak("Excellent! You found all the words!"), 500);
+            }
+        }
+
+        window.toggleHint = function(word) {
+            if (foundWords.has(word)) { speak(word); return; }
+            const first = word[0];
+            document.querySelectorAll('.cell').forEach(c => {
+                c.classList.remove('hint-blink');
+                if(c.textContent === first && !c.classList.contains('found')) c.classList.add('hint-blink');
+            });
+            speak(word);
+        };
+
+        window.revealAnswer = function(word) {
+            if (foundWords.has(word)) return;
+            if(wordPaths[word]) {
+                wordPaths[word].forEach(p => {
+                    const cell = document.querySelector(`.cell[data-r='${p.r}'][data-c='${p.c}']`);
+                    if(cell) cell.classList.add('answer-key');
+                });
+                markFound(word);
+            }
+        };
+
+        function speak(text) { window.speechSynthesis.cancel(); const msg = new SpeechSynthesisUtterance(text); msg.lang = 'en-US'; msg.rate = 0.8; window.speechSynthesis.speak(msg); }
+
+        async function saveToCloud(wordText) {
+            try {
+                await setDoc(doc(db, "teachers", TEACHER_ID), {
+                    vocabulary: wordText,
+                    lastUpdate: new Date(),
+                    isActive: true 
+                }, { merge: true });
+                console.log("雲端同步成功！");
+            } catch (e) { console.error("同步失敗:", e); }
+        }
+
+        async function checkAuthAndLoad() {
+            try {
+                const docSnap = await getDoc(doc(db, "teachers", TEACHER_ID));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.isActive === false) {
+                        document.body.innerHTML = "<h1 style='text-align:center;margin-top:100px;'>您的授權已到期，請聯繫阿奇老師續費。</h1>";
+                        throw new Error("Auth expired");
+                    }
+                    if (data.vocabulary) {
+                        document.getElementById('customWords').value = data.vocabulary;
+                    }
+                }
+            } catch (e) { console.log("載入完成"); }
+        }
+    </script>
+</body>
+</html>
