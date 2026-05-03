@@ -28,18 +28,33 @@ body {
 }
 
 header {
-    height: 60px;
+    height: 70px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 15px;
+    padding: 0 20px;
     background: white;
     border-bottom: 2px solid var(--frame-color);
 }
 
 h1 {
-    font-size: 20px;
+    font-size: 22px;
     color: var(--primary);
+}
+
+/* ⭐ 新增：按鈕區 */
+.top-buttons button {
+    font-size: 18px;
+    padding: 10px 16px;
+    margin-left: 8px;
+    border-radius: 8px;
+    border: 2px solid #333;
+    background: white;
+    cursor: pointer;
+}
+
+.top-buttons button:hover {
+    background: #ffe4ec;
 }
 
 #game-wrapper {
@@ -50,14 +65,14 @@ h1 {
 }
 
 #play-area {
-    width: min(90vw, 900px);
-    height: min(70vh, 600px);
+    width: min(90vw, 1000px);
+    height: min(75vh, 650px);
 
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     grid-template-rows: repeat(4, 1fr);
 
-    gap: 10px;
+    gap: 12px;
 }
 
 .glass-card {
@@ -68,7 +83,6 @@ h1 {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: 0.2s;
 }
 
 .selected {
@@ -77,13 +91,13 @@ h1 {
 }
 
 .word-text {
-    font-size: clamp(20px, 4vw, 40px);
+    font-size: clamp(24px, 3vw, 42px);
     font-weight: bold;
 }
 
 .card-img {
-    width: 80%;
-    height: 80%;
+    width: 85%;
+    height: 85%;
     object-fit: contain;
 }
 
@@ -116,10 +130,12 @@ h1 {
 
 <header>
     <h1>🌸 Akey Online Teaching Studio 🌸</h1>
-    <div>
-        <button onclick="goBack()">📚</button>
-        <button onclick="playTargetVoice()">🔊</button>
-        <button onclick="toggleMusic()">🎵</button>
+
+    <!-- ⭐ 改這裡（按鈕升級） -->
+    <div class="top-buttons">
+        <button onclick="goBack()">📚 BACK</button>
+        <button onclick="playTargetVoice()">🔊 LISTEN</button>
+        <button onclick="toggleMusic()">🎵 MUSIC</button>
     </div>
 </header>
 
@@ -133,7 +149,7 @@ h1 {
 
 <script>
 
-// ✅ Supabase
+// Supabase
 const client = window.supabase.createClient(
   "https://yrmgvwwmsgbkhijaosyw.supabase.co",
   "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
@@ -172,27 +188,21 @@ function toggleMusic(){
     bgMusic.paused ? bgMusic.play() : bgMusic.pause()
 }
 
-// ⭐ 新增返回
+// ⭐ 返回
 function goBack(){
     window.location.href = "A01-list.html"
 }
 
-// 🚀 載入資料
+// 載入資料
 async function loadData(){
 
     const roomId = getRoomId()
 
-    const { data, error } = await client
+    const { data } = await client
         .from("rooms")
         .select("*")
         .eq("room", roomId)
         .single()
-
-    if(error){
-        alert("讀資料失敗")
-        console.error(error)
-        return
-    }
 
     words = data.content.map(i => i.word)
 
@@ -340,7 +350,6 @@ function check(){
     }
 }
 
-// 啟動
 window.onload = loadData
 
 </script>
