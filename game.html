@@ -117,6 +117,7 @@ h1 {
 <header>
     <h1>🌸 Akey Online Teaching Studio 🌸</h1>
     <div>
+        <button onclick="goBack()">📚</button>
         <button onclick="playTargetVoice()">🔊</button>
         <button onclick="toggleMusic()">🎵</button>
     </div>
@@ -143,7 +144,6 @@ function getRoomId(){
   return params.get("room")
 }
 
-// 👉 改成動態
 let words = []
 let imageMap = {}
 
@@ -172,7 +172,12 @@ function toggleMusic(){
     bgMusic.paused ? bgMusic.play() : bgMusic.pause()
 }
 
-// 🚀 載入資料（唯一新增）
+// ⭐ 新增返回
+function goBack(){
+    window.location.href = "A01-list.html"
+}
+
+// 🚀 載入資料
 async function loadData(){
 
     const roomId = getRoomId()
@@ -200,7 +205,7 @@ async function loadData(){
     initGame()
 }
 
-// 初始化（完全沒改）
+// 初始化
 function initGame(){
 
     if(currentIndex >= questionList.length){
@@ -221,7 +226,7 @@ function initGame(){
     setTimeout(playTargetVoice,500)
 }
 
-// 畫畫面（只改圖片來源）
+// 畫面
 function renderGrid(){
 
     const area = document.getElementById("play-area")
@@ -335,7 +340,7 @@ function check(){
     }
 }
 
-// ✅ 啟動改這裡
+// 啟動
 window.onload = loadData
 
 </script>
