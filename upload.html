@@ -2,7 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>老師上傳教材</title>
+<title>建立教材</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 body {
@@ -19,63 +21,62 @@ body {
 
 .card {
   background: white;
-  padding: 15px;
-  border-radius: 12px;
+  padding: 10px;
+  border-radius: 10px;
   text-align: center;
-  border: 3px solid transparent;
-  position: relative;
+  border: 3px solid #ccc;
 }
 
-.card.ok {
-  border-color: green;
-}
-
-.card.error {
-  border-color: red;
-}
-
-.status {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  font-size: 20px;
-}
+.card.ok { border-color: green; }
+.card.error { border-color: red; }
 
 input {
   width: 80%;
-  padding: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 img {
-  margin-top: 8px;
   max-width: 60px;
 }
 
 button {
-  margin-top: 20px;
+  margin-top: 15px;
   padding: 10px 20px;
   font-size: 16px;
 }
-</style>
 
+#resultBox {
+  margin-top: 20px;
+  background: white;
+  padding: 15px;
+  display: none;
+}
+</style>
 </head>
+
 <body>
 
-<h2>建立遊戲教材</h2>
+<h2>📚 建立教材</h2>
 <h3 id="progress">已完成：0 / 12</h3>
 
 <div class="grid" id="grid"></div>
 
 <button onclick="save()">儲存教材</button>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<div id="resultBox">
+  <p>✅ 教材建立成功！</p>
+  <input id="link" style="width:80%">
+  <button onclick="copy()">複製連結</button>
+  <br><br>
+  <button onclick="goGame()">👉 直接進入遊戲</button>
+</div>
 
 <script>
-const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co"
-const SUPABASE_KEY = "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
 
-const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+const client = window.supabase.createClient(
+  "https://yrmgvwwmsgbkhijaosyw.supabase.co",
+  "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
+)
 
 const grid = document.getElementById("grid")
 
@@ -83,78 +84,68 @@ const grid = document.getElementById("grid")
 for (let i = 0; i < 12; i++) {
   grid.innerHTML += `
     <div class="card" id="card${i}">
-      <div class="status" id="status${i}"></div>
-
-      <input id="word${i}" placeholder="單字" oninput="checkOne(${i})"><br>
-      <input type="file" id="file${i}" onchange="preview(this, ${i}); checkOne(${i})"><br>
-
+      <input id="word${i}" placeholder="單字" oninput="check(${i})"><br>
+      <input type="file" id="file${i}" onchange="preview(this,${i});check(${i})"><br>
       <img id="img${i}">
     </div>
   `
 }
 
-// 預覽
-function preview(input, i) {
+function preview(input,i){
   const file = input.files[0]
-  if (!file) return
-  document.getElementById("img" + i).src = URL.createObjectURL(file)
+  if(file){
+    document.getElementById("img"+i).src = URL.createObjectURL(file)
+  }
 }
 
-// 單格檢查
-function checkOne(i) {
-  const word = document.getElementById("word" + i).value.trim()
-  const file = document.getElementById("file" + i).files[0]
+function check(i){
+  const word = document.getElementById("word"+i).value.trim()
+  const file = document.getElementById("file"+i).files[0]
+  const card = document.getElementById("card"+i)
 
-  const card = document.getElementById("card" + i)
-  const status = document.getElementById("status" + i)
-
-  if (word && file) {
-    card.classList.add("ok")
-    card.classList.remove("error")
-    status.innerText = "✔"
-  } else {
-    card.classList.add("error")
-    card.classList.remove("ok")
-    status.innerText = "❌"
+  if(word && file){
+    card.className = "card ok"
+  }else{
+    card.className = "card error"
   }
 
-  countFilled()
+  count()
 }
 
-// 計算完成
-function countFilled() {
-  let count = 0
-  for (let i = 0; i < 12; i++) {
-    const word = document.getElementById("word" + i).value.trim()
-    const file = document.getElementById("file" + i).files[0]
-    if (word && file) count++
+function count(){
+  let c = 0
+  for(let i=0;i<12;i++){
+    const w = document.getElementById("word"+i).value.trim()
+    const f = document.getElementById("file"+i).files[0]
+    if(w && f) c++
   }
-  document.getElementById("progress").innerText = `已完成：${count} / 12`
+  document.getElementById("progress").innerText = `已完成：${c}/12`
 }
 
-// 🚀 儲存 + 跳轉
-async function save() {
+let savedRoom = ""
+
+// ⭐ 儲存
+async function save(){
 
   let result = []
 
-  for (let i = 0; i < 12; i++) {
-    const word = document.getElementById("word" + i).value.trim()
-    const file = document.getElementById("file" + i).files[0]
+  for(let i=0;i<12;i++){
+    const word = document.getElementById("word"+i).value.trim()
+    const file = document.getElementById("file"+i).files[0]
 
-    if (!word || !file) {
-      alert("❗第 " + (i+1) + " 格還沒填")
+    if(!word || !file){
+      alert("還沒填完")
       return
     }
 
-    const fileName =
-      Date.now() + "_" + i + "_" + Math.random().toString(36).substring(2) + "_" + file.name
+    const fileName = Date.now()+"_"+i+"_"+file.name
 
     const { error } = await client.storage
       .from("images")
-      .upload(fileName, file)
+      .upload(fileName,file)
 
-    if (error) {
-      alert("❌ 第 " + (i+1) + " 張圖片上傳失敗\n" + error.message)
+    if(error){
+      alert("圖片上傳失敗")
       return
     }
 
@@ -168,29 +159,44 @@ async function save() {
     })
   }
 
-  // ✅ 先產生 roomId
+  // ⭐ 產生 room
   const roomId = Date.now().toString()
+  savedRoom = roomId
 
-  // ✅ 存資料（只做一次）
   const { error } = await client
     .from("rooms")
     .insert([
       {
-        user_id: "teacher",
+        user_id:"teacher",
         room: roomId,
         content: result
       }
     ])
 
-  if (error) {
-    alert("❌ 存資料失敗\n" + error.message)
-  } else {
-    alert("✅ 建立成功！即將進入遊戲")
+  if(error){
+    alert("存資料失敗")
+  }else{
 
-    // 🚀 自動進遊戲
-    window.location.href = "game.html?room=" + roomId
+    const link = "https://teresa-momochi.github.io/Akey/game.html?room="+roomId
+
+    document.getElementById("link").value = link
+    document.getElementById("resultBox").style.display = "block"
   }
 }
+
+// ⭐ 複製
+function copy(){
+  const input = document.getElementById("link")
+  input.select()
+  document.execCommand("copy")
+  alert("已複製給學生！")
+}
+
+// ⭐ 進遊戲
+function goGame(){
+  window.location.href = "game.html?room="+savedRoom
+}
+
 </script>
 
 </body>
