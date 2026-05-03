@@ -17,23 +17,23 @@ body {
 
 /* ⭐ 控制區 */
 .controls {
-    margin: 10px;
+    margin: 15px;
 }
 
 .controls button {
-    font-size: 20px;
-    padding: 8px 16px;
-    margin: 5px;
+    font-size: 22px;
+    padding: 10px 20px;
+    margin: 8px;
     cursor: pointer;
 }
 
-/* ⭐ 格子（改4欄 → 變大） */
+/* ⭐ 教室版：6欄 + 大畫面 */
 #play-area {
     display: grid;
-    grid-template-columns: repeat(4,1fr);
-    gap: 16px;
+    grid-template-columns: repeat(6,1fr);
+    gap: 18px;
     padding: 20px;
-    max-width: 900px;
+    max-width: 1500px;
     margin: auto;
 }
 
@@ -44,6 +44,7 @@ body {
     border-radius: 16px;
 
     aspect-ratio: 1 / 1;
+    min-height: 140px; /* ⭐ 放大 */
 
     display: flex;
     justify-content: center;
@@ -58,9 +59,9 @@ body {
     background: #e8f5e9;
 }
 
-/* ⭐ 文字 */
+/* ⭐ 文字（放大） */
 .word-text {
-    font-size: 32px;
+    font-size: 38px;
     font-weight: bold;
 }
 
@@ -140,7 +141,7 @@ async function loadGameData(){
 
   renderGrid()
 
-  // ⭐ 隨機第一題
+  // ⭐ 第一題
   currentWord = words[Math.floor(Math.random() * words.length)]
   speakWord()
 }
@@ -197,7 +198,7 @@ function check(){
     cardMap.word[selectedWord].classList.add("matched")
     cardMap.img[selectedImg].classList.add("matched")
 
-    // ⭐ 換下一題
+    // ⭐ 下一題
     currentWord = words[Math.floor(Math.random() * words.length)]
 
     setTimeout(()=>{
