@@ -46,7 +46,6 @@ button {
 <body>
 
 <h2>建立遊戲教材</h2>
-
 <h3 id="progress">已完成：0 / 12</h3>
 
 <div class="grid" id="grid"></div>
@@ -56,12 +55,9 @@ button {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-// ✅ 正確寫法（重點）
 const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co"
-
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybWd2d3dtc2dia2hpamFvc3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3Nzk0ODMsImV4cCI6MjA5MzM1NTQ4M30.EAHpePOJhR7HG6-LmLahZJ00ApCfQYzStvan-M4nh70"
 
-// ⚠️ 注意這行
 const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 // 建立12格
@@ -80,59 +76,46 @@ for (let i = 0; i < 12; i++) {
 // 計算完成數
 function countFilled() {
   let count = 0
-
   for (let i = 0; i < 12; i++) {
     const word = document.getElementById("word" + i).value
     const file = document.getElementById("file" + i).files[0]
-
     if (word && file) count++
   }
-
   document.getElementById("progress").innerText = `已完成：${count} / 12`
 }
 
-// 圖片預覽
+// 預覽圖片
 function preview(input, i) {
   const file = input.files[0]
   if (!file) return
-
-  const url = URL.createObjectURL(file)
-  document.getElementById("img" + i).src = url
+  document.getElementById("img" + i).src = URL.createObjectURL(file)
 }
 
-// 檢查是否填滿
-function validate() {
-  for (let i = 0; i < 12; i++) {
-    const word = document.getElementById("word" + i).value
-    const file = document.getElementById("file" + i).files[0]
-
-    if (!word || !file) {
-      alert("請填滿12組再儲存")
-      return false
-    }
-  }
-  return true
-}
-
-// 上傳
+// 上傳 + 存資料
 async function save() {
-
-  if (!validate()) return
 
   let result = []
 
   for (let i = 0; i < 12; i++) {
-    const word = document.getElementById("word" + i).value
+    const word = document.getElementById("word" + i).value.trim()
     const file = document.getElementById("file" + i).files[0]
 
-    const fileName = Date.now() + "_" + file.name
+    if (!word || !file) {
+      alert("❗第 " + (i+1) + " 格還沒填")
+      return
+    }
+
+    // ✅ 不會撞名版本
+    const fileName =
+      Date.now() + "_" + i + "_" + Math.random().toString(36).substring(2) + "_" + file.name
 
     const { error } = await client.storage
       .from("images")
       .upload(fileName, file)
 
     if (error) {
-      alert("圖片上傳失敗：" + error.message)
+      alert("❌ 第 " + (i+1) + " 張圖片上傳失敗\n" + error.message)
+      console.error(error)
       return
     }
 
@@ -146,6 +129,8 @@ async function save() {
     })
   }
 
+  console.log("成功筆數：", result.length)
+
   const { error } = await client
     .from("rooms")
     .insert([
@@ -157,9 +142,10 @@ async function save() {
     ])
 
   if (error) {
-    alert("存資料失敗：" + error.message)
+    alert("❌ 存資料失敗\n" + error.message)
+    console.error(error)
   } else {
-    alert("✅ 教材建立成功！")
+    alert("✅ 成功建立教材！（12筆）")
     location.reload()
   }
 }
