@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>選擇遊戲</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f6eef2;
+  text-align: center;
+  padding: 40px;
+}
+
+h2 {
+  margin-bottom: 30px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 600px;
+  margin: auto;
+}
+
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 20px;
+  border: 3px solid #ddd;
+}
+
+.card:hover {
+  background: #ffe4ec;
+  border-color: hotpink;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎮 選擇遊戲模組</h2>
+
+<div class="grid">
+
+  <div class="card" onclick="go('A01')">
+    🧠 A01<br>配對遊戲
+  </div>
+
+  <div class="card" onclick="go('A02')">
+    🔊 A02<br>聽力遊戲
+  </div>
+
+  <div class="card" onclick="go('A03')">
+    📖 A03<br>閱讀遊戲
+  </div>
+
+</div>
+
+<script>
+function go(module){
+  window.location.href = module + "-list.html"
+}
+</script>
+
+</body>
+</html>
