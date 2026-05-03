@@ -7,20 +7,52 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body { font-family: Arial; text-align: center; }
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #f7f2f5;
+}
+
+h2 {
+  margin-top: 20px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 15px;
   max-width: 600px;
-  margin: auto;
+  margin: 20px auto;
 }
+
 .card {
-  border: 2px solid #333;
+  border: 3px solid #444;
+  border-radius: 10px;
   padding: 10px;
   cursor: pointer;
+  background: white;
+  transition: 0.2s;
 }
-img { width: 80px; }
+
+/* 👉 點選效果 */
+.card.selected {
+  background: #ffe082;
+  border-color: orange;
+}
+
+/* 👉 答對 */
+.card.correct {
+  background: #a5d6a7;
+}
+
+/* 👉 答錯 */
+.card.wrong {
+  background: #ef9a9a;
+}
+
+img {
+  width: 80px;
+}
 </style>
 
 </head>
@@ -31,6 +63,11 @@ img { width: 80px; }
 
 <div id="game"></div>
 
+<!-- 🎵 音效 -->
+<audio id="bgm" src="bg-music.mp3" loop></audio>
+<audio id="rightSound" src="right.mp3"></audio>
+<audio id="wrongSound" src="wrong.mp3"></audio>
+
 <script>
 
 // ===== Supabase =====
@@ -38,6 +75,15 @@ const client = window.supabase.createClient(
   "https://yrmgvwwmsgbkhijaosyw.supabase.co",
   "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
 );
+
+let first = null;
+let second = null;
+
+// ===== 點一下播放背景音樂 =====
+document.body.addEventListener("click", () => {
+  const bgm = document.getElementById("bgm");
+  if (bgm.paused) bgm.play();
+}, { once: true });
 
 // ===== 讀資料 =====
 async function loadGame(){
@@ -67,11 +113,10 @@ function renderGame(content){
   let cards = [];
 
   content.forEach(item=>{
-    cards.push({type:"word", value:item.word});
-    cards.push({type:"img", value:item.image});
+    cards.push({type:"word", value:item.word, key:item.word});
+    cards.push({type:"img", value:item.image, key:item.word});
   });
 
-  // 打亂
   cards.sort(()=>Math.random()-0.5);
 
   game.className = "grid";
@@ -86,8 +131,54 @@ function renderGame(content){
       div.innerHTML = `<img src="${card.value}">`;
     }
 
+    div.dataset.key = card.key;
+
+    div.onclick = () => handleClick(div);
+
     game.appendChild(div);
   });
+}
+
+// ===== 點擊邏輯 =====
+function handleClick(card){
+
+  if(card.classList.contains("correct")) return;
+  if(card === first) return;
+
+  card.classList.add("selected");
+
+  if(!first){
+    first = card;
+    return;
+  }
+
+  second = card;
+
+  // 判斷是否配對
+  if(first.dataset.key === second.dataset.key){
+
+    first.classList.add("correct");
+    second.classList.add("correct");
+
+    document.getElementById("rightSound").play();
+
+  }else{
+
+    first.classList.add("wrong");
+    second.classList.add("wrong");
+
+    document.getElementById("wrongSound").play();
+
+    setTimeout(()=>{
+      first.classList.remove("selected","wrong");
+      second.classList.remove("selected","wrong");
+    }, 800);
+  }
+
+  setTimeout(()=>{
+    first = null;
+    second = null;
+  }, 800);
 }
 
 loadGame();
