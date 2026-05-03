@@ -56,7 +56,6 @@ button {
 
 <body>
 
-<!-- ⭐ 新增：返回按鈕 -->
 <button onclick="goBack()" style="margin-bottom:10px;">
 ⬅ 返回教材清單
 </button>
@@ -124,7 +123,7 @@ function check(i){
   const file = document.getElementById("file"+i).files[0]
   const card = document.getElementById("card"+i)
 
-  if(word && file){
+  if(word && (file || document.getElementById("img"+i).src)){
     card.className = "card ok"
   }else{
     card.className = "card error"
@@ -138,14 +137,16 @@ function count(){
   for(let i=0;i<12;i++){
     const w = document.getElementById("word"+i).value.trim()
     const f = document.getElementById("file"+i).files[0]
-    if(w && f) c++
+    const img = document.getElementById("img"+i).src
+
+    if(w && (f || img)) c++
   }
   document.getElementById("progress").innerText = `已完成：${c}/12`
 }
 
 let savedRoom = ""
 
-// ⭐ 儲存
+// ⭐⭐ 最終完整版 save（新增 + 修改共用）⭐⭐
 async function save(){
 
   const title = document.getElementById("title").value.trim()
@@ -154,60 +155,95 @@ async function save(){
     return
   }
 
+  const roomId = getRoomId()
+
   let result = []
 
   for(let i=0;i<12;i++){
     const word = document.getElementById("word"+i).value.trim()
     const file = document.getElementById("file"+i).files[0]
+    const oldImg = document.getElementById("img"+i).src
 
-    if(!word || !file){
+    if(!word){
       alert("還沒填完")
       return
     }
 
-    const fileName = Date.now()+"_"+i+"_"+file.name
+    let imageUrl = oldImg
 
-    const { error } = await client.storage
-      .from("images")
-      .upload(fileName,file)
+    // ⭐ 有換圖片才上傳
+    if(file){
 
-    if(error){
-      alert("圖片上傳失敗")
-      return
+      const fileName = Date.now()+"_"+i+"_"+file.name
+
+      const { error } = await client.storage
+        .from("images")
+        .upload(fileName,file)
+
+      if(error){
+        alert("圖片上傳失敗")
+        return
+      }
+
+      const { data } = client.storage
+        .from("images")
+        .getPublicUrl(fileName)
+
+      imageUrl = data.publicUrl
     }
-
-    const { data } = client.storage
-      .from("images")
-      .getPublicUrl(fileName)
 
     result.push({
       word: word,
-      image: data.publicUrl
+      image: imageUrl
     })
   }
 
-  const roomId = Date.now().toString()
-  savedRoom = roomId
+  // ⭐ 分支：修改 or 新增
+  if(roomId){
 
-  const { error } = await client
-    .from("rooms")
-    .insert([
-      {
-        user_id:"teacher",
-        room: roomId,
+    // ===== 修改 =====
+    const { error } = await client
+      .from("rooms")
+      .update({
         title: title,
         content: result
-      }
-    ])
+      })
+      .eq("room", roomId)
 
-  if(error){
-    alert("存資料失敗")
+    if(error){
+      alert("更新失敗")
+    }else{
+      alert("已更新教材")
+      window.location.href = "A01-list.html"
+    }
+
   }else{
 
-    const link = "https://teresa-momochi.github.io/Akey/game.html?room="+roomId
+    // ===== 新增 =====
+    const newRoom = Date.now().toString()
 
-    document.getElementById("link").value = link
-    document.getElementById("resultBox").style.display = "block"
+    const { error } = await client
+      .from("rooms")
+      .insert([
+        {
+          user_id:"teacher",
+          room: newRoom,
+          title: title,
+          content: result
+        }
+      ])
+
+    if(error){
+      alert("存資料失敗")
+    }else{
+
+      savedRoom = newRoom
+
+      const link = "https://teresa-momochi.github.io/Akey/game.html?room="+newRoom
+
+      document.getElementById("link").value = link
+      document.getElementById("resultBox").style.display = "block"
+    }
   }
 }
 
