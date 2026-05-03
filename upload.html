@@ -60,7 +60,7 @@ button {
 ⬅ 返回教材清單
 </button>
 
-<h2>📚 建立教材</h2>
+<h2 id="pageTitle">📚 建立教材</h2>
 
 <input id="title" placeholder="輸入教材名稱（例如：CVC short a）" 
 style="padding:10px; width:300px; margin-bottom:10px;">
@@ -81,14 +81,18 @@ style="padding:10px; width:300px; margin-bottom:10px;">
 
 <script>
 
-// ⭐ 抓 room（是否為編輯模式）
+// ⭐ 抓 room
 function getRoomId(){
   const params = new URLSearchParams(window.location.search)
   return params.get("room")
 }
 
-// ⭐ 返回
+// ⭐ 返回（加提醒）
 function goBack(){
+  if(isDirty){
+    const ok = confirm("尚未儲存，確定要離開嗎？")
+    if(!ok) return
+  }
   window.location.href = "A01-list.html"
 }
 
@@ -99,6 +103,9 @@ const client = window.supabase.createClient(
 )
 
 const grid = document.getElementById("grid")
+
+// ⭐ 是否有未儲存變更
+let isDirty = false
 
 // 建立12格
 for (let i = 0; i < 12; i++) {
@@ -118,7 +125,11 @@ function preview(input,i){
   }
 }
 
+// ⭐ 有改動就標記
 function check(i){
+
+  isDirty = true
+
   const word = document.getElementById("word"+i).value.trim()
   const file = document.getElementById("file"+i).files[0]
   const card = document.getElementById("card"+i)
@@ -146,7 +157,7 @@ function count(){
 
 let savedRoom = ""
 
-// ⭐⭐ 最終完整版 save（新增 + 修改共用）⭐⭐
+// ⭐ save
 async function save(){
 
   const title = document.getElementById("title").value.trim()
@@ -171,9 +182,7 @@ async function save(){
 
     let imageUrl = oldImg
 
-    // ⭐ 有換圖片才上傳
     if(file){
-
       const fileName = Date.now()+"_"+i+"_"+file.name
 
       const { error } = await client.storage
@@ -198,10 +207,7 @@ async function save(){
     })
   }
 
-  // ⭐ 分支：修改 or 新增
   if(roomId){
-
-    // ===== 修改 =====
     const { error } = await client
       .from("rooms")
       .update({
@@ -214,12 +220,11 @@ async function save(){
       alert("更新失敗")
     }else{
       alert("已更新教材")
+      isDirty = false
       window.location.href = "A01-list.html"
     }
 
   }else{
-
-    // ===== 新增 =====
     const newRoom = Date.now().toString()
 
     const { error } = await client
@@ -236,8 +241,8 @@ async function save(){
     if(error){
       alert("存資料失敗")
     }else{
-
       savedRoom = newRoom
+      isDirty = false
 
       const link = "https://teresa-momochi.github.io/Akey/game.html?room="+newRoom
 
@@ -247,7 +252,7 @@ async function save(){
   }
 }
 
-// 複製
+// copy
 function copy(){
   const input = document.getElementById("link")
   input.select()
@@ -255,17 +260,19 @@ function copy(){
   alert("已複製給學生！")
 }
 
-// 進遊戲
+// game
 function goGame(){
   window.location.href = "game.html?room="+savedRoom
 }
 
-// ⭐ 載入舊教材（編輯模式）
+// ⭐ 模式顯示 + 載入
 window.onload = async function(){
 
   const roomId = getRoomId()
 
   if(roomId){
+
+    document.getElementById("pageTitle").innerText = "📚 編輯教材（修改模式）"
 
     const { data } = await client
       .from("rooms")
@@ -282,8 +289,19 @@ window.onload = async function(){
     })
 
     count()
+
+  }else{
+    document.getElementById("pageTitle").innerText = "📚 建立教材（新增模式）"
   }
 }
+
+// ⭐ 離開提醒（關頁 / 重整）
+window.addEventListener("beforeunload", function (e) {
+  if(isDirty){
+    e.preventDefault()
+    e.returnValue = ""
+  }
+})
 
 </script>
 
