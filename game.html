@@ -13,30 +13,49 @@ body {
     background: #fce4ec;
     font-family: "Comic Sans MS";
 }
+
+/* ⭐ 整體格子 */
 #play-area {
     display: grid;
     grid-template-columns: repeat(6,1fr);
-    gap: 10px;
+    gap: 12px;
     padding: 20px;
 }
+
+/* ⭐ 卡片（重點修正） */
 .glass-card {
     background: white;
     border: 4px solid #333;
     border-radius: 12px;
+
+    width: 100%;
+    aspect-ratio: 1 / 1;   /* ⭐ 保持正方形 */
+
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100px;
+
+    overflow: hidden;      /* ⭐ 防止圖片跑出去 */
     cursor: pointer;
 }
+
+/* ⭐ 配對成功 */
 .matched {
     background: #e8f5e9;
 }
+
+/* ⭐ 文字 */
 .word-text {
-    font-size: 24px;
+    font-size: 22px;
+    font-weight: bold;
 }
+
+/* ⭐ 圖片（核心修正） */
 .card-img {
-    width: 80%;
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+    pointer-events: none;
 }
 </style>
 </head>
@@ -78,10 +97,6 @@ let imageMap = {}
 let selectedWord = ""
 let selectedImg = ""
 
-let currentTarget = ""
-let currentIndex = 0
-let questionList = []
-
 let cardMap = { word:{}, img:{} }
 
 // 🚀 載入資料
@@ -100,8 +115,6 @@ async function loadGameData(){
   data.content.forEach(i=>{
     imageMap[i.word] = i.image
   })
-
-  questionList = [...words].sort(()=>Math.random()-0.5)
 
   renderGrid()
 }
@@ -128,7 +141,7 @@ function renderGrid(){
       card.innerHTML = `<img src="${imageMap[item.val]}" class="card-img">`
     }
 
-    card.onclick = ()=>select(item.type,item.val,card)
+    card.onclick = ()=>select(item.type,item.val)
 
     cardMap[item.type][item.val] = card
 
@@ -137,7 +150,7 @@ function renderGrid(){
 }
 
 // 🖱 點擊
-function select(type,val,el){
+function select(type,val){
 
   if(type==="word") selectedWord = val
   else selectedImg = val
@@ -150,11 +163,8 @@ function select(type,val,el){
 // ✅ 判斷
 function check(){
 
-  currentTarget = selectedWord
-
   if(selectedWord === selectedImg){
 
-    // 🎉 音效 + 特效
     correctSound.play()
     confetti()
 
