@@ -12,30 +12,44 @@
 body {
     background: #fce4ec;
     font-family: "Comic Sans MS";
+    text-align: center;
 }
 
-/* ⭐ 整體格子 */
+/* ⭐ 控制區 */
+.controls {
+    margin: 10px;
+}
+
+.controls button {
+    font-size: 20px;
+    padding: 8px 16px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+/* ⭐ 格子（改4欄 → 變大） */
 #play-area {
     display: grid;
-    grid-template-columns: repeat(6,1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4,1fr);
+    gap: 16px;
     padding: 20px;
+    max-width: 900px;
+    margin: auto;
 }
 
-/* ⭐ 卡片（重點修正） */
+/* ⭐ 卡片 */
 .glass-card {
     background: white;
     border: 4px solid #333;
-    border-radius: 12px;
+    border-radius: 16px;
 
-    width: 100%;
-    aspect-ratio: 1 / 1;   /* ⭐ 保持正方形 */
+    aspect-ratio: 1 / 1;
 
     display: flex;
     justify-content: center;
     align-items: center;
 
-    overflow: hidden;      /* ⭐ 防止圖片跑出去 */
+    overflow: hidden;
     cursor: pointer;
 }
 
@@ -46,11 +60,11 @@ body {
 
 /* ⭐ 文字 */
 .word-text {
-    font-size: 22px;
+    font-size: 32px;
     font-weight: bold;
 }
 
-/* ⭐ 圖片（核心修正） */
+/* ⭐ 圖片 */
 .card-img {
     max-width: 85%;
     max-height: 85%;
@@ -63,6 +77,12 @@ body {
 <body>
 
 <h2>🌸 Akey Matching Game 🌸</h2>
+
+<div class="controls">
+  <button onclick="speakWord()">🔊 再聽一次</button>
+  <button onclick="toggleMusic()">🎵 音樂開關</button>
+</div>
+
 <div id="play-area"></div>
 
 <script>
@@ -80,7 +100,7 @@ const wrongSound = new Audio("right.mp3")
 
 bgMusic.loop = true
 
-// 👉 點一下才播放（瀏覽器規則）
+// 👉 點一下才播放（瀏覽器限制）
 document.body.addEventListener("click", ()=>{
     bgMusic.play()
 }, { once:true })
@@ -98,6 +118,8 @@ let selectedWord = ""
 let selectedImg = ""
 
 let cardMap = { word:{}, img:{} }
+
+let currentWord = ""
 
 // 🚀 載入資料
 async function loadGameData(){
@@ -117,6 +139,10 @@ async function loadGameData(){
   })
 
   renderGrid()
+
+  // ⭐ 隨機第一題
+  currentWord = words[Math.floor(Math.random() * words.length)]
+  speakWord()
 }
 
 // 🎮 畫面
@@ -171,12 +197,41 @@ function check(){
     cardMap.word[selectedWord].classList.add("matched")
     cardMap.img[selectedImg].classList.add("matched")
 
+    // ⭐ 換下一題
+    currentWord = words[Math.floor(Math.random() * words.length)]
+
+    setTimeout(()=>{
+      speakWord()
+    }, 500)
+
   }else{
     wrongSound.play()
   }
 
   selectedWord = ""
   selectedImg = ""
+}
+
+// 🔊 唸單字
+function speakWord(){
+
+  if(!currentWord) return
+
+  const utter = new SpeechSynthesisUtterance(currentWord)
+  utter.lang = "en-US"
+  utter.rate = 0.8
+
+  speechSynthesis.cancel()
+  speechSynthesis.speak(utter)
+}
+
+// 🎵 音樂開關
+function toggleMusic(){
+  if(bgMusic.paused){
+    bgMusic.play()
+  }else{
+    bgMusic.pause()
+  }
 }
 
 // 啟動
