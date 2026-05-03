@@ -56,10 +56,13 @@ button {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-const supabase = supabase.createClient(
-  "https://yrmgvwwmsgbkhijaosyw.supabase.co",
-  "👉換成你的 anon key"
-)
+// ✅ 正確寫法（重點）
+const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co"
+
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybWd2d3dtc2dia2hpamFvc3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3Nzk0ODMsImV4cCI6MjA5MzM1NTQ4M30.EAHpePOJhR7HG6-LmLahZJ00ApCfQYzStvan-M4nh70"
+
+// ⚠️ 注意這行
+const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 // 建立12格
 const grid = document.getElementById("grid")
@@ -124,16 +127,16 @@ async function save() {
 
     const fileName = Date.now() + "_" + file.name
 
-    const { error } = await supabase.storage
+    const { error } = await client.storage
       .from("images")
       .upload(fileName, file)
 
     if (error) {
-      alert("圖片上傳失敗")
+      alert("圖片上傳失敗：" + error.message)
       return
     }
 
-    const { data } = supabase.storage
+    const { data } = client.storage
       .from("images")
       .getPublicUrl(fileName)
 
@@ -143,7 +146,7 @@ async function save() {
     })
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from("rooms")
     .insert([
       {
@@ -154,7 +157,7 @@ async function save() {
     ])
 
   if (error) {
-    alert("存資料失敗")
+    alert("存資料失敗：" + error.message)
   } else {
     alert("✅ 教材建立成功！")
     location.reload()
