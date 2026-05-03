@@ -92,7 +92,7 @@ async function load(){
       </div>
       <div>
         <button onclick="play('${room.room}')">開始</button>
-        <button onclick="editTitle('${room.id}','${room.title || ""}')">修改</button>
+        <button onclick="edit('${room.room}')">修改</button>
         <button onclick="del('${room.id}')">刪除</button>
       </div>
     `
@@ -104,6 +104,11 @@ async function load(){
 // 跳遊戲
 function play(id){
   window.location.href = "game.html?room=" + id
+}
+
+// ⭐ 新增：進入編輯（重點🔥）
+function edit(roomId){
+  window.location.href = "upload.html?room=" + roomId
 }
 
 // 返回
@@ -137,7 +142,7 @@ async function del(id){
   }
 }
 
-// ⭐ 新增：修改教材名稱
+// ⭐ 保留（改名稱功能）
 async function editTitle(id, oldTitle){
 
   const newTitle = prompt("請輸入新教材名稱", oldTitle)
