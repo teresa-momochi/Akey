@@ -58,7 +58,6 @@ button {
 
 <h2>📚 建立教材</h2>
 
-<!-- ⭐ 教材名稱 -->
 <input id="title" placeholder="輸入教材名稱（例如：CVC short a）" 
 style="padding:10px; width:300px; margin-bottom:10px;">
 
@@ -78,7 +77,7 @@ style="padding:10px; width:300px; margin-bottom:10px;">
 
 <script>
 
-// ⭐ 新增：抓 room（之後修改用）
+// ⭐ 抓 room（是否為編輯模式）
 function getRoomId(){
   const params = new URLSearchParams(window.location.search)
   return params.get("room")
@@ -136,7 +135,7 @@ function count(){
 
 let savedRoom = ""
 
-// ⭐ 儲存
+// ⭐ 儲存（目前仍是新增版本）
 async function save(){
 
   const title = document.getElementById("title").value.trim()
@@ -213,6 +212,33 @@ function copy(){
 // 進遊戲
 function goGame(){
   window.location.href = "game.html?room="+savedRoom
+}
+
+/* ⭐⭐ 關鍵：載入舊教材（編輯模式）⭐⭐ */
+window.onload = async function(){
+
+  const roomId = getRoomId()
+
+  if(roomId){
+
+    const { data } = await client
+      .from("rooms")
+      .select("*")
+      .eq("room", roomId)
+      .single()
+
+    // 填標題
+    document.getElementById("title").value = data.title || ""
+
+    // 填內容
+    data.content.forEach((item,i)=>{
+      document.getElementById("word"+i).value = item.word
+      document.getElementById("img"+i).src = item.image
+      document.getElementById("card"+i).className = "card ok"
+    })
+
+    count()
+  }
 }
 
 </script>
