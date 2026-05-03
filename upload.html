@@ -78,6 +78,13 @@ style="padding:10px; width:300px; margin-bottom:10px;">
 
 <script>
 
+// ⭐ 新增：抓 room（之後修改用）
+function getRoomId(){
+  const params = new URLSearchParams(window.location.search)
+  return params.get("room")
+}
+
+// Supabase
 const client = window.supabase.createClient(
   "https://yrmgvwwmsgbkhijaosyw.supabase.co",
   "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
@@ -132,7 +139,6 @@ let savedRoom = ""
 // ⭐ 儲存
 async function save(){
 
-  // ⭐ 檢查教材名稱
   const title = document.getElementById("title").value.trim()
   if(!title){
     alert("請輸入教材名稱")
@@ -171,7 +177,6 @@ async function save(){
     })
   }
 
-  // ⭐ 產生 room
   const roomId = Date.now().toString()
   savedRoom = roomId
 
@@ -181,10 +186,7 @@ async function save(){
       {
         user_id:"teacher",
         room: roomId,
-
-        // ⭐ 重點：寫入 title
         title: title,
-
         content: result
       }
     ])
@@ -200,7 +202,7 @@ async function save(){
   }
 }
 
-// ⭐ 複製
+// 複製
 function copy(){
   const input = document.getElementById("link")
   input.select()
@@ -208,7 +210,7 @@ function copy(){
   alert("已複製給學生！")
 }
 
-// ⭐ 進遊戲
+// 進遊戲
 function goGame(){
   window.location.href = "game.html?room="+savedRoom
 }
