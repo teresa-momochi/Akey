@@ -1,90 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>上傳教材</title>
+<meta charset="UTF-8">
+<title>老師上傳教材</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f6eef2;
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+input {
+  width: 80%;
+  padding: 6px;
+  margin-bottom: 10px;
+}
+
+img {
+  margin-top: 8px;
+  max-width: 60px;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+}
+</style>
+
 </head>
 <body>
 
-<h1>上傳教材</h1>
+<h2>建立遊戲教材</h2>
 
-<input id="word" placeholder="輸入單字">
-<br><br>
+<h3 id="progress">已完成：0 / 12</h3>
 
-<input type="file" id="file">
-<br><br>
+<div class="grid" id="grid"></div>
 
-<button onclick="add()">新增一組</button>
-<button onclick="save()">儲存</button>
-
-<h3>目前資料：</h3>
-<ul id="list"></ul>
+<button onclick="save()">儲存教材</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
 const supabase = supabase.createClient(
   "https://yrmgvwwmsgbkhijaosyw.supabase.co",
-  "你的 anon key"
+  "👉換成你的 anon key"
 )
 
-let data = []
+// 建立12格
+const grid = document.getElementById("grid")
 
-function add() {
-  const word = document.getElementById("word").value
-  const file = document.getElementById("file").files[0]
+for (let i = 0; i < 12; i++) {
+  grid.innerHTML += `
+    <div class="card">
+      <input id="word${i}" placeholder="單字" oninput="countFilled()"><br>
+      <input type="file" id="file${i}" onchange="preview(this, ${i}); countFilled()"><br>
+      <img id="img${i}">
+    </div>
+  `
+}
 
-  if (!word || !file) {
-    alert("請輸入文字 + 選圖片")
-    return
+// 計算完成數
+function countFilled() {
+  let count = 0
+
+  for (let i = 0; i < 12; i++) {
+    const word = document.getElementById("word" + i).value
+    const file = document.getElementById("file" + i).files[0]
+
+    if (word && file) count++
   }
 
-  data.push({ word, file })
-
-  render()
-
-  document.getElementById("word").value = ""
-  document.getElementById("file").value = ""
+  document.getElementById("progress").innerText = `已完成：${count} / 12`
 }
 
-function render() {
-  const list = document.getElementById("list")
-  list.innerHTML = ""
+// 圖片預覽
+function preview(input, i) {
+  const file = input.files[0]
+  if (!file) return
 
-  data.forEach((item, i) => {
-    const li = document.createElement("li")
-    li.innerText = `${i + 1}. ${item.word}`
-    list.appendChild(li)
-  })
+  const url = URL.createObjectURL(file)
+  document.getElementById("img" + i).src = url
 }
 
+// 檢查是否填滿
+function validate() {
+  for (let i = 0; i < 12; i++) {
+    const word = document.getElementById("word" + i).value
+    const file = document.getElementById("file" + i).files[0]
+
+    if (!word || !file) {
+      alert("請填滿12組再儲存")
+      return false
+    }
+  }
+  return true
+}
+
+// 上傳
 async function save() {
-  if (data.length === 0) {
-    alert("沒有資料")
-    return
-  }
+
+  if (!validate()) return
 
   let result = []
 
-  for (let item of data) {
-    const fileName = Date.now() + "_" + item.file.name
+  for (let i = 0; i < 12; i++) {
+    const word = document.getElementById("word" + i).value
+    const file = document.getElementById("file" + i).files[0]
+
+    const fileName = Date.now() + "_" + file.name
 
     const { error } = await supabase.storage
       .from("images")
-      .upload(fileName, item.file)
+      .upload(fileName, file)
 
     if (error) {
       alert("圖片上傳失敗")
       return
     }
 
-    const { data: urlData } = supabase.storage
+    const { data } = supabase.storage
       .from("images")
       .getPublicUrl(fileName)
 
     result.push({
-      word: item.word,
-      image: urlData.publicUrl
+      word: word,
+      image: data.publicUrl
     })
   }
 
@@ -92,8 +147,8 @@ async function save() {
     .from("rooms")
     .insert([
       {
-        user_id: "test",
-        room: "room1",
+        user_id: "teacher",
+        room: Date.now().toString(),
         content: result
       }
     ])
@@ -101,9 +156,8 @@ async function save() {
   if (error) {
     alert("存資料失敗")
   } else {
-    alert("成功！")
-    data = []
-    render()
+    alert("✅ 教材建立成功！")
+    location.reload()
   }
 }
 </script>
