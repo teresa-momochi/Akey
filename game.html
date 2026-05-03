@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>配對遊戲</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body { font-family: Arial; text-align: center; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-width: 600px;
+  margin: auto;
+}
+.card {
+  border: 2px solid #333;
+  padding: 10px;
+  cursor: pointer;
+}
+img { width: 80px; }
+</style>
+
+</head>
+
+<body>
+
+<h2>配對遊戲</h2>
+
+<div id="game"></div>
+
+<script>
+
+// ===== Supabase =====
+const client = window.supabase.createClient(
+  "https://yrmgvwwmsgbkhijaosyw.supabase.co",
+  "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
+);
+
+// ===== 讀資料 =====
+async function loadGame(){
+
+  const { data } = await client
+    .from("rooms")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if(!data || data.length === 0){
+    alert("沒有資料！");
+    return;
+  }
+
+  const content = data[0].content;
+
+  renderGame(content);
+}
+
+// ===== 畫遊戲 =====
+function renderGame(content){
+
+  const game = document.getElementById("game");
+  game.innerHTML = "";
+
+  let cards = [];
+
+  content.forEach(item=>{
+    cards.push({type:"word", value:item.word});
+    cards.push({type:"img", value:item.image});
+  });
+
+  // 打亂
+  cards.sort(()=>Math.random()-0.5);
+
+  game.className = "grid";
+
+  cards.forEach(card=>{
+    const div = document.createElement("div");
+    div.className = "card";
+
+    if(card.type === "word"){
+      div.innerText = card.value;
+    }else{
+      div.innerHTML = `<img src="${card.value}">`;
+    }
+
+    game.appendChild(div);
+  });
+}
+
+loadGame();
+
+</script>
+
+</body>
+</html>
