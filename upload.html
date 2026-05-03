@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>上傳教材</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+<h2>上傳教材</h2>
+
+<input id="word" placeholder="輸入單字"><br><br>
+<input type="file" id="file"><br><br>
+
+<button onclick="upload()">新增一組</button>
+<button onclick="save()">儲存</button>
+
+<p id="msg"></p>
+
+<script>
+
+const supabase = window.supabase.createClient(
+"https://yrmgvwwmsgbkhijaosyw.supabase.co",
+"sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
+);
+
+let data = [];
+
+async function upload(){
+  let word = document.getElementById("word").value;
+  let file = document.getElementById("file").files[0];
+
+  if(!word || !file){
+    alert("請輸入單字+圖片");
+    return;
+  }
+
+  let name = Date.now() + "-" + file.name;
+
+  await supabase.storage.from("images").upload(name, file);
+
+  let url = "https://yrmgvwwmsgbkhijaosyw.supabase.co/storage/v1/object/public/images/" + name;
+
+  data.push({word: word, image: url});
+
+  document.getElementById("msg").innerText = "已加入：" + word;
+}
+
+async function save(){
+  await supabase.from("rooms").insert([{room:"room1", content:data}]);
+  alert("完成！");
+}
+
+</script>
+
+</body>
+</html>
