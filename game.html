@@ -9,82 +9,126 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
+:root {
+    --bg-color: #fce4ec;
+    --primary: #ff1493;
+    --frame-color: #2d1b24;
+    --success-color: #2e7d32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    background: #fce4ec;
-    font-family: "Comic Sans MS";
-    text-align: center;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+    font-family: "Comic Sans MS", cursive;
+    display: flex;
+    flex-direction: column;
 }
 
-/* ⭐ 控制區 */
-.controls {
-    margin: 15px;
-}
-
-.controls button {
-    font-size: 22px;
-    padding: 10px 20px;
-    margin: 8px;
-    cursor: pointer;
-}
-
-/* ⭐ 教室版：6欄 + 大畫面 */
-#play-area {
-    display: grid;
-    grid-template-columns: repeat(6,1fr);
-    gap: 18px;
-    padding: 20px;
-    max-width: 1500px;
-    margin: auto;
-}
-
-/* ⭐ 卡片 */
-.glass-card {
+header {
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
     background: white;
-    border: 4px solid #333;
-    border-radius: 16px;
+    border-bottom: 2px solid var(--frame-color);
+}
 
-    aspect-ratio: 1 / 1;
-    min-height: 140px; /* ⭐ 放大 */
+h1 {
+    font-size: 20px;
+    color: var(--primary);
+}
 
+#game-wrapper {
+    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
+}
 
-    overflow: hidden;
+#play-area {
+    width: min(90vw, 900px);
+    height: min(70vh, 600px);
+
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+
+    gap: 10px;
+}
+
+.glass-card {
+    background: white;
+    border: 5px outset var(--frame-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    transition: 0.2s;
 }
 
-/* ⭐ 配對成功 */
-.matched {
-    background: #e8f5e9;
+.selected {
+    background: #ffe082 !important;
+    border: 5px solid orange !important;
 }
 
-/* ⭐ 文字（放大） */
 .word-text {
-    font-size: 38px;
+    font-size: clamp(20px, 4vw, 40px);
     font-weight: bold;
 }
 
-/* ⭐ 圖片 */
 .card-img {
-    max-width: 85%;
-    max-height: 85%;
+    width: 80%;
+    height: 80%;
     object-fit: contain;
-    pointer-events: none;
+}
+
+.matched {
+    background: #e8f5e9;
+    border: 4px solid var(--success-color);
+}
+
+.checkmark {
+    font-size: clamp(20px, 4vw, 40px);
+    display: none;
+}
+
+.matched .checkmark { display: block; }
+.matched .word-text,
+.matched .card-img { display: none; }
+
+#feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 15vh;
+    display: none;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🌸 Akey Matching Game 🌸</h2>
+<header>
+    <h1>🌸 Akey Online Teaching Studio 🌸</h1>
+    <div>
+        <button onclick="playTargetVoice()">🔊</button>
+        <button onclick="toggleMusic()">🎵</button>
+    </div>
+</header>
 
-<div class="controls">
-  <button onclick="speakWord()">🔊 再聽一次</button>
-  <button onclick="toggleMusic()">🎵 音樂開關</button>
+<div id="game-wrapper">
+    <div id="play-area"></div>
 </div>
 
-<div id="play-area"></div>
+<div id="feedback"></div>
+
+<audio id="bg-music" src="bg-music.mp3" loop></audio>
 
 <script>
 
@@ -94,149 +138,205 @@ const client = window.supabase.createClient(
   "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
 )
 
-// 🔊 聲音
-const bgMusic = new Audio("bg-music.mp3")
-const correctSound = new Audio("hurray.mp3")
-const wrongSound = new Audio("right.mp3")
-
-bgMusic.loop = true
-
-// 👉 點一下才播放（瀏覽器限制）
-document.body.addEventListener("click", ()=>{
-    bgMusic.play()
-}, { once:true })
-
-// 👉 讀 room
 function getRoomId(){
   const params = new URLSearchParams(window.location.search)
   return params.get("room")
 }
 
+// 👉 改成動態
 let words = []
 let imageMap = {}
+
+let currentTarget = ""
+let currentIndex = 0
+let questionList = []
 
 let selectedWord = ""
 let selectedImg = ""
 
 let cardMap = { word:{}, img:{} }
 
-let currentWord = ""
+// 音效
+const rightSound = new Audio("right.mp3")
+const wrongSound = new Audio("wrong.mp3")
+const hurraySound = new Audio("hurray.mp3")
 
-// 🚀 載入資料
-async function loadGameData(){
+const bgMusic = document.getElementById("bg-music")
+bgMusic.volume = 0.2
 
-  const roomId = getRoomId()
+document.body.addEventListener("click", () => {
+    if (bgMusic.paused) bgMusic.play().catch(()=>{})
+}, { once:true })
 
-  const { data } = await client
-    .from("rooms")
-    .select("*")
-    .eq("room", roomId)
-    .single()
-
-  words = data.content.map(i=>i.word)
-
-  data.content.forEach(i=>{
-    imageMap[i.word] = i.image
-  })
-
-  renderGrid()
-
-  // ⭐ 第一題
-  currentWord = words[Math.floor(Math.random() * words.length)]
-  speakWord()
+function toggleMusic(){
+    bgMusic.paused ? bgMusic.play() : bgMusic.pause()
 }
 
-// 🎮 畫面
-function renderGrid(){
+// 🚀 載入資料（唯一新增）
+async function loadData(){
 
-  const area = document.getElementById("play-area")
-  area.innerHTML = ""
+    const roomId = getRoomId()
 
-  let items = [
-    ...words.map(w=>({type:"word", val:w})),
-    ...words.map(w=>({type:"img", val:w}))
-  ].sort(()=>Math.random()-0.5)
+    const { data, error } = await client
+        .from("rooms")
+        .select("*")
+        .eq("room", roomId)
+        .single()
 
-  items.forEach(item=>{
-
-    const card = document.createElement("div")
-    card.className = "glass-card"
-
-    if(item.type==="word"){
-      card.innerHTML = `<span class="word-text">${item.val}</span>`
-    }else{
-      card.innerHTML = `<img src="${imageMap[item.val]}" class="card-img">`
+    if(error){
+        alert("讀資料失敗")
+        console.error(error)
+        return
     }
 
-    card.onclick = ()=>select(item.type,item.val)
+    words = data.content.map(i => i.word)
 
-    cardMap[item.type][item.val] = card
+    data.content.forEach(i=>{
+        imageMap[i.word] = i.image
+    })
 
-    area.appendChild(card)
-  })
+    questionList = [...words].sort(()=>Math.random()-0.5)
+
+    initGame()
 }
 
-// 🖱 點擊
-function select(type,val){
+// 初始化（完全沒改）
+function initGame(){
 
-  if(type==="word") selectedWord = val
-  else selectedImg = val
+    if(currentIndex >= questionList.length){
+        hurraySound.play()
+        confetti()
+        setTimeout(()=>location.reload(),3000)
+        return
+    }
 
-  if(selectedWord && selectedImg){
-    check()
-  }
+    currentTarget = questionList[currentIndex]
+    selectedWord = ""
+    selectedImg = ""
+
+    if(currentIndex === 0){
+        renderGrid()
+    }
+
+    setTimeout(playTargetVoice,500)
 }
 
-// ✅ 判斷
+// 畫畫面（只改圖片來源）
+function renderGrid(){
+
+    const area = document.getElementById("play-area")
+    area.innerHTML = ""
+
+    let items = [
+        ...words.map(w=>({type:"word", val:w})),
+        ...words.map(w=>({type:"img", val:w}))
+    ].sort(()=>Math.random()-0.5)
+
+    items.forEach(item=>{
+
+        const card = document.createElement("div")
+        card.className = "glass-card"
+
+        if(item.type === "word"){
+            card.innerHTML = `
+                <span class="word-text">${item.val}</span>
+                <span class="checkmark">⭕</span>
+            `
+        }else{
+            card.innerHTML = `
+                <img src="${imageMap[item.val]}" class="card-img">
+                <span class="checkmark">⭕</span>
+            `
+        }
+
+        cardMap[item.type][item.val] = card
+
+        card.onclick = ()=>{
+            if(!card.classList.contains("matched")){
+                select(item.type,item.val,card)
+            }
+        }
+
+        area.appendChild(card)
+    })
+}
+
+// 語音
+function playTargetVoice(){
+    const u = new SpeechSynthesisUtterance(currentTarget)
+    u.lang = "en-US"
+    u.rate = 0.7
+    speechSynthesis.speak(u)
+}
+
+// 點擊
+function select(type,val,el){
+
+    if(type === "word"){
+        document.querySelectorAll(".word-selected")
+            .forEach(c=>c.classList.remove("selected","word-selected"))
+
+        selectedWord = val
+        el.classList.add("selected","word-selected")
+
+    }else{
+        document.querySelectorAll(".img-selected")
+            .forEach(c=>c.classList.remove("selected","img-selected"))
+
+        selectedImg = val
+        el.classList.add("selected","img-selected")
+    }
+
+    if(selectedWord && selectedImg){
+        check()
+    }
+}
+
+// 判斷
 function check(){
 
-  if(selectedWord === selectedImg){
+    const fb = document.getElementById("feedback")
 
-    correctSound.play()
-    confetti()
+    if(selectedWord === currentTarget && selectedImg === currentTarget){
 
-    cardMap.word[selectedWord].classList.add("matched")
-    cardMap.img[selectedImg].classList.add("matched")
+        document.querySelectorAll(".selected")
+            .forEach(c=>c.classList.remove("selected"))
 
-    // ⭐ 下一題
-    currentWord = words[Math.floor(Math.random() * words.length)]
+        fb.innerText = "⭕"
+        fb.style.display = "block"
 
-    setTimeout(()=>{
-      speakWord()
-    }, 500)
+        rightSound.play()
 
-  }else{
-    wrongSound.play()
-  }
+        cardMap.word[currentTarget].classList.add("matched")
+        cardMap.img[currentTarget].classList.add("matched")
 
-  selectedWord = ""
-  selectedImg = ""
+        currentIndex++
+
+        setTimeout(()=>{
+            fb.style.display = "none"
+            initGame()
+        },1000)
+
+    }else{
+
+        fb.innerText = "❌"
+        fb.style.display = "block"
+
+        wrongSound.play()
+
+        setTimeout(()=>{
+            fb.style.display = "none"
+            selectedWord = ""
+            selectedImg = ""
+
+            document.querySelectorAll(".selected")
+                .forEach(c=>c.classList.remove("selected"))
+        },800)
+    }
 }
 
-// 🔊 唸單字
-function speakWord(){
-
-  if(!currentWord) return
-
-  const utter = new SpeechSynthesisUtterance(currentWord)
-  utter.lang = "en-US"
-  utter.rate = 0.8
-
-  speechSynthesis.cancel()
-  speechSynthesis.speak(utter)
-}
-
-// 🎵 音樂開關
-function toggleMusic(){
-  if(bgMusic.paused){
-    bgMusic.play()
-  }else{
-    bgMusic.pause()
-  }
-}
-
-// 啟動
-window.onload = loadGameData
+// ✅ 啟動改這裡
+window.onload = loadData
 
 </script>
 
