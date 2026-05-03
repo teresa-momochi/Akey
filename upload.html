@@ -72,7 +72,6 @@ button {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-// ✅ 用你給的新版 key
 const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co"
 const SUPABASE_KEY = "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
 
@@ -94,14 +93,14 @@ for (let i = 0; i < 12; i++) {
   `
 }
 
-// 預覽圖片
+// 預覽
 function preview(input, i) {
   const file = input.files[0]
   if (!file) return
   document.getElementById("img" + i).src = URL.createObjectURL(file)
 }
 
-// 單格檢查（✔ ❌）
+// 單格檢查
 function checkOne(i) {
   const word = document.getElementById("word" + i).value.trim()
   const file = document.getElementById("file" + i).files[0]
@@ -110,19 +109,19 @@ function checkOne(i) {
   const status = document.getElementById("status" + i)
 
   if (word && file) {
-    card.classList.remove("error")
     card.classList.add("ok")
+    card.classList.remove("error")
     status.innerText = "✔"
   } else {
-    card.classList.remove("ok")
     card.classList.add("error")
+    card.classList.remove("ok")
     status.innerText = "❌"
   }
 
   countFilled()
 }
 
-// 計算完成數
+// 計算完成
 function countFilled() {
   let count = 0
   for (let i = 0; i < 12; i++) {
@@ -133,7 +132,7 @@ function countFilled() {
   document.getElementById("progress").innerText = `已完成：${count} / 12`
 }
 
-// 上傳 + 存資料
+// 🚀 儲存 + 跳轉
 async function save() {
 
   let result = []
@@ -156,7 +155,6 @@ async function save() {
 
     if (error) {
       alert("❌ 第 " + (i+1) + " 張圖片上傳失敗\n" + error.message)
-      console.error(error)
       return
     }
 
@@ -170,24 +168,27 @@ async function save() {
     })
   }
 
-  console.log("成功筆數：", result.length)
+  // ✅ 先產生 roomId
+  const roomId = Date.now().toString()
 
+  // ✅ 存資料（只做一次）
   const { error } = await client
     .from("rooms")
     .insert([
       {
         user_id: "teacher",
-        room: Date.now().toString(),
+        room: roomId,
         content: result
       }
     ])
 
   if (error) {
     alert("❌ 存資料失敗\n" + error.message)
-    console.error(error)
   } else {
-    alert("✅ 成功建立教材！（12筆）")
-    location.reload()
+    alert("✅ 建立成功！即將進入遊戲")
+
+    // 🚀 自動進遊戲
+    window.location.href = "game.html?room=" + roomId
   }
 }
 </script>
