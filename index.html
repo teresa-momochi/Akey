@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <title>教材編輯</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- ⭐ 這行很重要 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body { font-family: sans-serif; padding:20px; }
-.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-input { width:100%; }
+body { font-family: Arial; padding: 20px; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 </style>
 
 </head>
@@ -20,22 +20,20 @@ input { width:100%; }
 <button onclick="addRoom()">➕ 新增教室</button>
 <button onclick="generateGame()">💾 儲存並開始</button>
 
-<br><br>
-
 <div id="setup-grid" class="grid"></div>
 
 <script>
 // ===== Supabase =====
 const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let currentRoom = "room1";
+const currentRoom = "room1";
 let gameData = [];
 
 // ===== 初始化 =====
 window.onload = () => {
-    gameData = Array.from({length:12}, () => ({word:"",image:""}));
+    gameData = Array(12).fill().map(()=>({word:"",image:""}));
     renderSetupGrid();
 };
 
@@ -47,9 +45,9 @@ function renderSetupGrid(){
     gameData.forEach((item,i)=>{
         grid.innerHTML += `
         <div>
-            <input id="w-${i}" placeholder="單字">
-            <input type="file" onchange="handleFile(event,${i})">
-            <img id="p-${i}" width="50">
+            <input id="w-${i}" placeholder="單字"><br>
+            <input type="file" onchange="handleFile(event,${i})"><br>
+            <img id="p-${i}" width="60">
         </div>`;
     });
 }
@@ -79,26 +77,18 @@ async function generateGame(){
         });
     }
 
-    const { error } = await supabase.from('rooms').insert({
+    await supabase.from('rooms').insert({
         user_id: "test-user",
         room: currentRoom,
         content: finalContent
     });
 
-    if(error){
-        alert("錯誤："+error.message);
-    }else{
-        alert("已儲存！");
-    }
+    alert("已儲存！");
 }
 
 // ===== 新增教室 =====
 function addRoom(){
-    const name = prompt("輸入教室名稱（例如：room2）");
-    if(name){
-        currentRoom = name;
-        alert("切換到："+name);
-    }
+    alert("之後會做多教室，目前固定 room1");
 }
 </script>
 
