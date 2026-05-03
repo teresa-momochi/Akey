@@ -58,8 +58,9 @@ button {
 
 <h2>📚 建立教材</h2>
 
-<!-- ⭐ 新增：教材名稱 -->
-<input id="title" placeholder="輸入教材名稱（例如：CVC short a）" style="padding:10px; width:300px; margin-bottom:10px;">
+<!-- ⭐ 教材名稱 -->
+<input id="title" placeholder="輸入教材名稱（例如：CVC short a）" 
+style="padding:10px; width:300px; margin-bottom:10px;">
 
 <h3 id="progress">已完成：0 / 12</h3>
 
@@ -131,7 +132,7 @@ let savedRoom = ""
 // ⭐ 儲存
 async function save(){
 
-  // ⭐ 新增：檢查教材名稱
+  // ⭐ 檢查教材名稱
   const title = document.getElementById("title").value.trim()
   if(!title){
     alert("請輸入教材名稱")
@@ -181,7 +182,7 @@ async function save(){
         user_id:"teacher",
         room: roomId,
 
-        // ⭐ 新增這行（重點）
+        // ⭐ 重點：寫入 title
         title: title,
 
         content: result
