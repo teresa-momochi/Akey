@@ -1,95 +1,313 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>教材編輯</title>
+<meta name="google" content="notranslate">
+<title>Akey Online Teaching Studio</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
+<style>
+:root {
+    --bg-color: #fce4ec;
+    --primary: #ff1493;
+    --frame-color: #2d1b24;
+    --success-color: #2e7d32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+    font-family: "Comic Sans MS", cursive;
+    display: flex;
+    flex-direction: column;
+}
+
+/* header */
+header {
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    background: white;
+    border-bottom: 2px solid var(--frame-color);
+}
+
+h1 {
+    font-size: 20px;
+    color: var(--primary);
+}
+
+/* ⭐ 外層置中 */
+#game-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ⭐ 固定比例 */
+#play-area {
+    width: min(90vw, 900px);
+    height: min(70vh, 600px);
+
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+
+    gap: 10px;
+}
+
+/* 卡片 */
+.glass-card {
+    background: white;
+    border: 5px outset var(--frame-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* ⭐⭐⭐ 新增：點擊選取效果 */
+.selected {
+    background: #ffe082 !important;
+    border: 5px solid orange !important;
+}
+
+/* 字 */
+.word-text {
+    font-size: clamp(20px, 4vw, 40px);
+    font-weight: bold;
+}
+
+/* 圖 */
+.card-img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+}
+
+/* 配對成功 */
+.matched {
+    background: #e8f5e9;
+    border: 4px solid var(--success-color);
+}
+
+.checkmark {
+    font-size: clamp(20px, 4vw, 40px);
+    display: none;
+}
+
+.matched .checkmark { display: block; }
+.matched .word-text,
+.matched .card-img { display: none; }
+
+/* 中間提示 */
+#feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 15vh;
+    display: none;
+}
+</style>
 </head>
 
 <body>
 
-<h2>教材編輯</h2>
+<header>
+    <h1>🌸 Akey Online Teaching Studio 🌸</h1>
+    <div>
+        <button onclick="playTargetVoice()">🔊</button>
+        <button onclick="toggleMusic()">🎵</button>
+    </div>
+</header>
 
-<button onclick="addRoom()">新增教室</button>
-<button onclick="generateGame()">儲存並開始</button>
+<div id="game-wrapper">
+    <div id="play-area"></div>
+</div>
 
-<div id="setup-grid"></div>
+<div id="feedback"></div>
+
+<audio id="bg-music" src="bg-music.mp3" loop></audio>
 
 <script>
 
-// ===== Supabase（只留這一份！！）=====
-const client = window.supabase.createClient(
-  "https://yrmgvwwmsgbkhijaosyw.supabase.co",
-  "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
-);
+// 單字
+const words = ["bad","dad","mad","sad","can","fan","pan","van","cap","bag","bat","cat"];
 
-let gameData = [];
-const currentRoom = "room1";
+let currentTarget = "";
+let currentIndex = 0;
+let questionList = [...words].sort(()=>Math.random()-0.5);
 
-// ===== 初始化 =====
-window.onload = function () {
-  gameData = Array.from({length:12}, () => ({word:"",image:""}));
-  renderSetupGrid();
-};
+let selectedWord = "";
+let selectedImg = "";
 
-// ===== 畫畫面 =====
-function renderSetupGrid(){
-  const grid = document.getElementById("setup-grid");
-  grid.innerHTML = "";
+let cardMap = { word:{}, img:{} };
 
-  gameData.forEach((item,i)=>{
-    grid.innerHTML += `
-      <div>
-        <input id="w-${i}" placeholder="單字"><br>
-        <input type="file" onchange="handleFile(event,${i})"><br>
-        <img id="p-${i}" width="60">
-      </div>
-    `;
-  });
+// 音效
+const rightSound = new Audio("right.mp3");
+const wrongSound = new Audio("wrong.mp3");
+const hurraySound = new Audio("hurray.mp3");
+
+const bgMusic = document.getElementById("bg-music");
+bgMusic.volume = 0.2;
+
+// ⭐ 解鎖音樂
+document.body.addEventListener("click", () => {
+    if (bgMusic.paused) {
+        bgMusic.play().catch(()=>{});
+    }
+}, { once:true });
+
+function toggleMusic(){
+    bgMusic.paused ? bgMusic.play() : bgMusic.pause();
 }
 
-// ===== 上傳圖片 =====
-async function handleFile(e,i){
-  const file = e.target.files[0];
-  if(!file) return;
+// 初始化
+function initGame(){
 
-  const path = "test/" + Date.now() + "_" + file.name;
+    if(currentIndex >= questionList.length){
+        hurraySound.play();
+        confetti();
+        setTimeout(()=>location.reload(),3000);
+        return;
+    }
 
-  await client.storage.from("images").upload(path,file);
+    currentTarget = questionList[currentIndex];
+    selectedWord = "";
+    selectedImg = "";
 
-  const { data } = client.storage.from("images").getPublicUrl(path);
+    if(currentIndex === 0){
+        renderGrid();
+    }
 
-  gameData[i].image = data.publicUrl;
-  document.getElementById("p-"+i).src = data.publicUrl;
+    setTimeout(playTargetVoice,500);
 }
 
-// ===== 儲存 =====
-async function generateGame(){
+// 畫畫面
+function renderGrid(){
 
-  const data = [];
+    const area = document.getElementById("play-area");
+    area.innerHTML = "";
 
-  for(let i=0;i<12;i++){
-    data.push({
-      word: document.getElementById("w-"+i).value,
-      image: document.getElementById("p-"+i).src
+    let items = [
+        ...words.map(w=>({type:"word", val:w})),
+        ...words.map(w=>({type:"img", val:w}))
+    ].sort(()=>Math.random()-0.5);
+
+    items.forEach(item=>{
+
+        const card = document.createElement("div");
+        card.className = "glass-card";
+
+        if(item.type === "word"){
+            card.innerHTML = `
+                <span class="word-text">${item.val}</span>
+                <span class="checkmark">⭕</span>
+            `;
+        }else{
+            card.innerHTML = `
+                <img src="${item.val}.png" class="card-img">
+                <span class="checkmark">⭕</span>
+            `;
+        }
+
+        cardMap[item.type][item.val] = card;
+
+        card.onclick = ()=>{
+            if(!card.classList.contains("matched")){
+                select(item.type,item.val,card);
+            }
+        };
+
+        area.appendChild(card);
     });
-  }
-
-  await client.from("rooms").insert({
-    user_id: "test",
-    room: currentRoom,
-    content: data
-  });
-
-  alert("成功！");
 }
 
-// ===== 新增教室 =====
-function addRoom(){
-  alert("目前固定 room1");
+// 語音
+function playTargetVoice(){
+    const u = new SpeechSynthesisUtterance(currentTarget);
+    u.lang = "en-US";
+    u.rate = 0.7;
+    speechSynthesis.speak(u);
 }
+
+// ⭐⭐⭐ 核心修正（點擊效果）
+function select(type,val,el){
+
+    if(type === "word"){
+        document.querySelectorAll(".word-selected")
+            .forEach(c=>c.classList.remove("selected","word-selected"));
+
+        selectedWord = val;
+        el.classList.add("selected","word-selected");
+
+    }else{
+        document.querySelectorAll(".img-selected")
+            .forEach(c=>c.classList.remove("selected","img-selected"));
+
+        selectedImg = val;
+        el.classList.add("selected","img-selected");
+    }
+
+    if(selectedWord && selectedImg){
+        check();
+    }
+}
+
+// 判斷
+function check(){
+
+    const fb = document.getElementById("feedback");
+
+    if(selectedWord === currentTarget && selectedImg === currentTarget){
+
+        document.querySelectorAll(".selected")
+            .forEach(c=>c.classList.remove("selected"));
+
+        fb.innerText = "⭕";
+        fb.style.display = "block";
+
+        rightSound.play();
+
+        cardMap.word[currentTarget].classList.add("matched");
+        cardMap.img[currentTarget].classList.add("matched");
+
+        currentIndex++;
+
+        setTimeout(()=>{
+            fb.style.display = "none";
+            initGame();
+        },1000);
+
+    }else{
+
+        fb.innerText = "❌";
+        fb.style.display = "block";
+
+        wrongSound.play();
+
+        setTimeout(()=>{
+            fb.style.display = "none";
+            selectedWord = "";
+            selectedImg = "";
+
+            document.querySelectorAll(".selected")
+                .forEach(c=>c.classList.remove("selected"));
+        },800);
+    }
+}
+
+// 啟動
+window.onload = initGame;
 
 </script>
 
