@@ -19,19 +19,22 @@
 
 <script>
 
-const supabase = window.supabase.createClient(
+// ===== Supabase（只留這一份！！）=====
+const client = window.supabase.createClient(
   "https://yrmgvwwmsgbkhijaosyw.supabase.co",
   "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
 );
 
 let gameData = [];
-let currentRoom = "room1";
+const currentRoom = "room1";
 
+// ===== 初始化 =====
 window.onload = function () {
   gameData = Array.from({length:12}, () => ({word:"",image:""}));
   renderSetupGrid();
 };
 
+// ===== 畫畫面 =====
 function renderSetupGrid(){
   const grid = document.getElementById("setup-grid");
   grid.innerHTML = "";
@@ -47,20 +50,22 @@ function renderSetupGrid(){
   });
 }
 
+// ===== 上傳圖片 =====
 async function handleFile(e,i){
   const file = e.target.files[0];
   if(!file) return;
 
   const path = "test/" + Date.now() + "_" + file.name;
 
-  await supabase.storage.from("images").upload(path,file);
+  await client.storage.from("images").upload(path,file);
 
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  const { data } = client.storage.from("images").getPublicUrl(path);
 
   gameData[i].image = data.publicUrl;
   document.getElementById("p-"+i).src = data.publicUrl;
 }
 
+// ===== 儲存 =====
 async function generateGame(){
 
   const data = [];
@@ -72,7 +77,7 @@ async function generateGame(){
     });
   }
 
-  await supabase.from("rooms").insert({
+  await client.from("rooms").insert({
     user_id: "test",
     room: currentRoom,
     content: data
@@ -81,12 +86,9 @@ async function generateGame(){
   alert("成功！");
 }
 
+// ===== 新增教室 =====
 function addRoom(){
-  const name = prompt("輸入教室名稱");
-  if(name){
-    currentRoom = name;
-    alert("切換到：" + name);
-  }
+  alert("目前固定 room1");
 }
 
 </script>
