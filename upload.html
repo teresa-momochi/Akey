@@ -22,6 +22,23 @@ body {
   padding: 15px;
   border-radius: 12px;
   text-align: center;
+  border: 3px solid transparent;
+  position: relative;
+}
+
+.card.ok {
+  border-color: green;
+}
+
+.card.error {
+  border-color: red;
+}
+
+.status {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 20px;
 }
 
 input {
@@ -55,33 +72,26 @@ button {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
+// ✅ 用你給的新版 key
 const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co"
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybWd2d3dtc2dia2hpamFvc3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3Nzk0ODMsImV4cCI6MjA5MzM1NTQ4M30.EAHpePOJhR7HG6-LmLahZJ00ApCfQYzStvan-M4nh70"
+const SUPABASE_KEY = "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
 
 const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// 建立12格
 const grid = document.getElementById("grid")
 
+// 建立12格
 for (let i = 0; i < 12; i++) {
   grid.innerHTML += `
-    <div class="card">
-      <input id="word${i}" placeholder="單字" oninput="countFilled()"><br>
-      <input type="file" id="file${i}" onchange="preview(this, ${i}); countFilled()"><br>
+    <div class="card" id="card${i}">
+      <div class="status" id="status${i}"></div>
+
+      <input id="word${i}" placeholder="單字" oninput="checkOne(${i})"><br>
+      <input type="file" id="file${i}" onchange="preview(this, ${i}); checkOne(${i})"><br>
+
       <img id="img${i}">
     </div>
   `
-}
-
-// 計算完成數
-function countFilled() {
-  let count = 0
-  for (let i = 0; i < 12; i++) {
-    const word = document.getElementById("word" + i).value
-    const file = document.getElementById("file" + i).files[0]
-    if (word && file) count++
-  }
-  document.getElementById("progress").innerText = `已完成：${count} / 12`
 }
 
 // 預覽圖片
@@ -89,6 +99,38 @@ function preview(input, i) {
   const file = input.files[0]
   if (!file) return
   document.getElementById("img" + i).src = URL.createObjectURL(file)
+}
+
+// 單格檢查（✔ ❌）
+function checkOne(i) {
+  const word = document.getElementById("word" + i).value.trim()
+  const file = document.getElementById("file" + i).files[0]
+
+  const card = document.getElementById("card" + i)
+  const status = document.getElementById("status" + i)
+
+  if (word && file) {
+    card.classList.remove("error")
+    card.classList.add("ok")
+    status.innerText = "✔"
+  } else {
+    card.classList.remove("ok")
+    card.classList.add("error")
+    status.innerText = "❌"
+  }
+
+  countFilled()
+}
+
+// 計算完成數
+function countFilled() {
+  let count = 0
+  for (let i = 0; i < 12; i++) {
+    const word = document.getElementById("word" + i).value.trim()
+    const file = document.getElementById("file" + i).files[0]
+    if (word && file) count++
+  }
+  document.getElementById("progress").innerText = `已完成：${count} / 12`
 }
 
 // 上傳 + 存資料
@@ -105,7 +147,6 @@ async function save() {
       return
     }
 
-    // ✅ 不會撞名版本
     const fileName =
       Date.now() + "_" + i + "_" + Math.random().toString(36).substring(2) + "_" + file.name
 
