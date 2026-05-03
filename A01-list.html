@@ -92,6 +92,7 @@ async function load(){
       </div>
       <div>
         <button onclick="play('${room.room}')">開始</button>
+        <button onclick="editTitle('${room.id}','${room.title || ""}')">修改</button>
         <button onclick="del('${room.id}')">刪除</button>
       </div>
     `
@@ -132,6 +133,27 @@ async function del(id){
     console.error(error)
   }else{
     alert("已刪除")
+    load()
+  }
+}
+
+// ⭐ 新增：修改教材名稱
+async function editTitle(id, oldTitle){
+
+  const newTitle = prompt("請輸入新教材名稱", oldTitle)
+
+  if(!newTitle) return
+
+  const { error } = await client
+    .from("rooms")
+    .update({ title: newTitle })
+    .eq("id", id)
+
+  if(error){
+    alert("修改失敗")
+    console.error(error)
+  }else{
+    alert("已更新")
     load()
   }
 }
