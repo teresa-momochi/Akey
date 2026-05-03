@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>A01 教材清單</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f6eef2;
+  padding: 30px;
+}
+
+h2 {
+  margin-bottom: 20px;
+}
+
+.topbar {
+  margin-bottom: 20px;
+}
+
+button {
+  padding: 8px 15px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.list {
+  display: grid;
+  gap: 15px;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>🧠 A01 配對遊戲教材</h2>
+
+<div class="topbar">
+  <button onclick="goMenu()">⬅ 返回模組</button>
+  <button onclick="goUpload()">➕ 新增教材</button>
+</div>
+
+<div class="list" id="list"></div>
+
+<script>
+
+// Supabase
+const client = window.supabase.createClient(
+  "https://yrmgvwwmsgbkhijaosyw.supabase.co",
+  "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
+)
+
+// 載入資料
+async function load(){
+
+  const { data, error } = await client
+    .from("rooms")
+    .select("*")
+    .order("created_at", { ascending:false })
+
+  if(error){
+    alert("讀取失敗")
+    return
+  }
+
+  const list = document.getElementById("list")
+  list.innerHTML = ""
+
+  data.forEach(room=>{
+
+    const div = document.createElement("div")
+    div.className = "card"
+
+    div.innerHTML = `
+      <div>
+        📦 ${room.room}<br>
+        🕒 ${new Date(room.created_at).toLocaleString()}
+      </div>
+      <div>
+        <button onclick="play('${room.room}')">開始</button>
+      </div>
+    `
+
+    list.appendChild(div)
+  })
+}
+
+// 跳遊戲
+function play(id){
+  window.location.href = "game.html?room=" + id
+}
+
+// 返回
+function goMenu(){
+  window.location.href = "menu.html"
+}
+
+// 新增教材
+function goUpload(){
+  window.location.href = "upload.html"
+}
+
+load()
+
+</script>
+
+</body>
+</html>
