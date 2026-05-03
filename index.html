@@ -1,95 +1,119 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>教材編輯</title>
 
-<!-- ⭐ 這行很重要 -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body { font-family: Arial; padding: 20px; }
-.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
 </style>
 
 </head>
+
 <body>
 
 <h2>教材編輯</h2>
 
-<button onclick="addRoom()">➕ 新增教室</button>
-<button onclick="generateGame()">💾 儲存並開始</button>
+<button onclick="addRoom()">新增教室</button>
+<button onclick="generateGame()">儲存並開始</button>
 
 <div id="setup-grid" class="grid"></div>
 
 <script>
-// ===== Supabase =====
-const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co";
-const SUPABASE_KEY = "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const currentRoom = "room1";
+// ===== Supabase（只會宣告一次）=====
+const supabase = window.supabase.createClient(
+  "https://yrmgvwwmsgbkhijaosyw.supabase.co",
+  "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
+);
+
 let gameData = [];
+let currentRoom = "room1";
 
 // ===== 初始化 =====
 window.onload = () => {
-    gameData = Array(12).fill().map(()=>({word:"",image:""}));
-    renderSetupGrid();
+  gameData = Array.from({length:12}, () => ({word:"",image:""}));
+  renderSetupGrid();
 };
 
-// ===== 畫輸入框 =====
+// ===== 畫畫面 =====
 function renderSetupGrid(){
-    const grid = document.getElementById('setup-grid');
-    grid.innerHTML = "";
+  const grid = document.getElementById("setup-grid");
+  grid.innerHTML = "";
 
-    gameData.forEach((item,i)=>{
-        grid.innerHTML += `
-        <div>
-            <input id="w-${i}" placeholder="單字"><br>
-            <input type="file" onchange="handleFile(event,${i})"><br>
-            <img id="p-${i}" width="60">
-        </div>`;
-    });
+  gameData.forEach((item,i)=>{
+    grid.innerHTML += `
+      <div>
+        <input id="w-${i}" placeholder="單字"><br>
+        <input type="file" onchange="handleFile(event,${i})"><br>
+        <img id="p-${i}" width="60">
+      </div>
+    `;
+  });
 }
 
 // ===== 上傳圖片 =====
-async function handleFile(e,index){
-    const file = e.target.files[0];
-    if(!file) return;
+async function handleFile(e,i){
+  const file = e.target.files[0];
+  if(!file) return;
 
-    const path = `test/${Date.now()}_${file.name}`;
-    await supabase.storage.from('images').upload(path,file);
+  const path = "test/" + Date.now() + "_" + file.name;
 
-    const { data } = supabase.storage.from('images').getPublicUrl(path);
+  const { error } = await supabase.storage
+    .from("images")
+    .upload(path,file);
 
-    gameData[index].image = data.publicUrl;
-    document.getElementById(`p-${index}`).src = data.publicUrl;
+  if(error){
+    alert("上傳失敗：" + error.message);
+    return;
+  }
+
+  const { data } = supabase.storage
+    .from("images")
+    .getPublicUrl(path);
+
+  gameData[i].image = data.publicUrl;
+  document.getElementById("p-"+i).src = data.publicUrl;
 }
 
 // ===== 儲存 =====
 async function generateGame(){
-    const finalContent = [];
 
-    for(let i=0;i<12;i++){
-        finalContent.push({
-            word: document.getElementById(`w-${i}`).value,
-            image: document.getElementById(`p-${i}`).src
-        });
-    }
+  const data = [];
 
-    await supabase.from('rooms').insert({
-        user_id: "test-user",
-        room: currentRoom,
-        content: finalContent
+  for(let i=0;i<12;i++){
+    data.push({
+      word: document.getElementById("w-"+i).value,
+      image: document.getElementById("p-"+i).src
     });
+  }
 
-    alert("已儲存！");
+  const { error } = await supabase.from("rooms").insert({
+    user_id: "test",
+    room: currentRoom,
+    content: data
+  });
+
+  if(error){
+    alert("存檔失敗：" + error.message);
+    return;
+  }
+
+  alert("成功！");
 }
 
 // ===== 新增教室 =====
 function addRoom(){
-    alert("之後會做多教室，目前固定 room1");
+  const name = prompt("輸入教室名稱");
+  if(name){
+    currentRoom = name;
+    alert("已切換：" + name);
+  }
 }
+
 </script>
 
 </body>
