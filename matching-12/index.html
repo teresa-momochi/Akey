@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>阿奇線上教學工作室</title>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body,html { margin:0; font-family:"Microsoft JhengHei"; }
+#play-area { display:grid; grid-template-columns:repeat(6,1fr); gap:5px; padding:10px; }
+.glass-card { border:2px solid black; display:flex; align-items:center; justify-content:center; height:100px; cursor:pointer; }
+.matched { background:#c8e6c9; }
+#setup-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding:20px; overflow:auto; }
+.word-text { font-size:20px; }
+.card-img { width:80px; }
+</style>
+</head>
+
+<body>
+
+<div id="setup-overlay">
+<h2>教材編輯</h2>
+<button onclick="addRoom()">➕ 新增教室</button>
+<div id="setup-grid"></div>
+<button onclick="generateGame()">儲存並開始</button>
+</div>
+
+<div id="play-area"></div>
+
+<script>
+// ===== Supabase =====
+const SUPABASE_URL = "https://yrmgvwwmsgbkhijaosyw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ✅ 不用登入版本（重點修改）
+const currentRoom = new URLSearchParams(window.location.search).get('class') || 'room1';
+const user = { id: "test-user" };
+
+let gameData = [];
+let currentTarget = "";
+let selectedWord = "";
+let selectedImg = "";
+let questionList = [];
+let currentIndex = 0;
+
+// ===== 載入 =====
+async function loadData(){
+    const { data } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('room', currentRoom)
+        .maybeSingle();
+
+    if(data && data.content){
+        gameData = data.content;
+    } else {
+        gameData = Array(12).fill().map(()=>({word:"",image:""}));
+    }
+
+    renderSetupGrid();
+}
+
+// ===== 編輯畫面 =====
+function renderSetupGrid(){
+    const grid = document.getElementById('setup-grid');
+    grid.innerHTML = "";
+
+    gameData.forEach((item,i)=>{
+        grid.innerHTML += `
+        <div>
+            <input id="w-${i}" value="${item.word || ""}" placeholder="輸入單字">
+            <input type="file" onchange="handleFile(event,${i})">
+            <img id="p-${i}" src="${item.image || ""}" width="50">
+        </div>`;
+    });
+}
+
+// ===== 上傳圖片 =====
+async function handleFile(e,index){
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const path = `test/${Date.now()}_${file.name}`;
+
+    const { error } = await supabase.storage
+        .from('images')
+        .upload(path, file, { upsert:true });
+
+    if(error){
+        alert("圖片上傳失敗");
+        return;
+    }
+
+    const { data } = supabase.storage.from('images').getPublicUrl(path);
+
+    gameData[index].image = data.publicUrl;
+    document.getElementById(`p-${index}`).src = data.publicUrl;
+}
+
+// ===== 儲存 =====
+async function generateGame(){
+    const finalContent = [];
+
+    for(let i=0;i<12;i++){
+        finalContent.push({
+            word: document.getElementById(`w-${i}`).value,
+            image: document.getElementById(`p-${i}`).src
+        });
+    }
+
+    await supabase.from('rooms').upsert({
+        user_id:user.id,
+        room:currentRoom,
+        content:finalContent
+    });
+
+    gameData = finalContent;
+    document.getElementById('setup-overlay').style.display='none';
+    startGame();
+}
+
+// ===== 遊戲 =====
+function startGame(){
+    const valid = gameData.filter(d=>d.word && d.image);
+    questionList = [...valid].sort(()=>Math.random()-0.5);
+    currentIndex = 0;
+
+    renderGame(valid);
+    nextQuestion();
+}
+
+function renderGame(data){
+    const area = document.getElementById('play-area');
+    area.innerHTML = "";
+
+    let items = [];
+    data.forEach(d=>{
+        items.push({type:'word',val:d.word});
+        items.push({type:'img',val:d.word,img:d.image});
+    });
+
+    items.sort(()=>Math.random()-0.5);
+
+    items.forEach(item=>{
+        const card = document.createElement('div');
+        card.className="glass-card";
+
+        if(item.type==='word'){
+            card.innerHTML=`<span class="word-text">${item.val}</span>`;
+            card.onclick=()=>selectWord(item.val,card);
+        }else{
+            card.innerHTML=`<img src="${item.img}" class="card-img">`;
+            card.onclick=()=>selectImg(item.val,card);
+        }
+
+        area.appendChild(card);
+    });
+}
+
+// ===== 選擇 =====
+function selectWord(val,el){
+    selectedWord = val;
+    highlight(el);
+    check();
+}
+
+function selectImg(val,el){
+    selectedImg = val;
+    highlight(el);
+    check();
+}
+
+function highlight(el){
+    document.querySelectorAll('.glass-card').forEach(c=>c.style.background="white");
+    el.style.background="#bbdefb";
+}
+
+// ===== 判斷 =====
+function check(){
+    if(selectedWord && selectedImg){
+        if(selectedWord===currentTarget && selectedImg===currentTarget){
+            confetti();
+            markMatched();
+            currentIndex++;
+            setTimeout(nextQuestion,800);
+        }else{
+            alert("錯誤");
+            resetSelect();
+        }
+    }
+}
+
+function markMatched(){
+    document.querySelectorAll('.glass-card').forEach(c=>{
+        if(c.style.background==="rgb(187, 222, 251)"){
+            c.classList.add('matched');
+        }
+    });
+}
+
+function resetSelect(){
+    selectedWord="";
+    selectedImg="";
+    document.querySelectorAll('.glass-card').forEach(c=>c.style.background="white");
+}
+
+// ===== 下一題 =====
+function nextQuestion(){
+    if(currentIndex>=questionList.length){
+        alert("完成！");
+        return;
+    }
+    currentTarget = questionList[currentIndex].word;
+}
+
+// ===== 新增教室 =====
+async function addRoom(){
+    const name = prompt("輸入教室名稱");
+    if(!name) return;
+
+    await supabase.from('rooms').insert({
+        user_id:user.id,
+        room:name,
+        content:[]
+    });
+
+    location.href = "?class=" + name;
+}
+
+// ===== 啟動 =====
+window.onload = loadData;
+</script>
+
+</body>
+</html>
