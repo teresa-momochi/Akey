@@ -86,7 +86,8 @@ async function load(){
 
     div.innerHTML = `
       <div>
-        📦 ${room.room}<br>
+        📘 ${room.title || "未命名教材"}<br>
+        🆔 ${room.room}<br>
         🕒 ${new Date(room.created_at).toLocaleString()}
       </div>
       <div>
@@ -114,7 +115,7 @@ function goUpload(){
   window.location.href = "upload.html"
 }
 
-// ⭐ 新增：刪除功能（只加這段）
+// ⭐ 刪除
 async function del(id){
 
   const ok = confirm("確定要刪除這筆教材嗎？")
