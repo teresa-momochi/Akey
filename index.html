@@ -6,11 +6,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-body { font-family: Arial; padding: 20px; }
-.grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-</style>
-
 </head>
 
 <body>
@@ -20,11 +15,10 @@ body { font-family: Arial; padding: 20px; }
 <button onclick="addRoom()">新增教室</button>
 <button onclick="generateGame()">儲存並開始</button>
 
-<div id="setup-grid" class="grid"></div>
+<div id="setup-grid"></div>
 
 <script>
 
-// ===== Supabase（只會宣告一次）=====
 const supabase = window.supabase.createClient(
   "https://yrmgvwwmsgbkhijaosyw.supabase.co",
   "sb_publishable_x5SjT9PnauTQohiQr_WF7g_BbQ2-D8E"
@@ -33,13 +27,11 @@ const supabase = window.supabase.createClient(
 let gameData = [];
 let currentRoom = "room1";
 
-// ===== 初始化 =====
-window.onload = () => {
+window.onload = function () {
   gameData = Array.from({length:12}, () => ({word:"",image:""}));
   renderSetupGrid();
 };
 
-// ===== 畫畫面 =====
 function renderSetupGrid(){
   const grid = document.getElementById("setup-grid");
   grid.innerHTML = "";
@@ -55,31 +47,20 @@ function renderSetupGrid(){
   });
 }
 
-// ===== 上傳圖片 =====
 async function handleFile(e,i){
   const file = e.target.files[0];
   if(!file) return;
 
   const path = "test/" + Date.now() + "_" + file.name;
 
-  const { error } = await supabase.storage
-    .from("images")
-    .upload(path,file);
+  await supabase.storage.from("images").upload(path,file);
 
-  if(error){
-    alert("上傳失敗：" + error.message);
-    return;
-  }
-
-  const { data } = supabase.storage
-    .from("images")
-    .getPublicUrl(path);
+  const { data } = supabase.storage.from("images").getPublicUrl(path);
 
   gameData[i].image = data.publicUrl;
   document.getElementById("p-"+i).src = data.publicUrl;
 }
 
-// ===== 儲存 =====
 async function generateGame(){
 
   const data = [];
@@ -91,26 +72,20 @@ async function generateGame(){
     });
   }
 
-  const { error } = await supabase.from("rooms").insert({
+  await supabase.from("rooms").insert({
     user_id: "test",
     room: currentRoom,
     content: data
   });
 
-  if(error){
-    alert("存檔失敗：" + error.message);
-    return;
-  }
-
   alert("成功！");
 }
 
-// ===== 新增教室 =====
 function addRoom(){
   const name = prompt("輸入教室名稱");
   if(name){
     currentRoom = name;
-    alert("已切換：" + name);
+    alert("切換到：" + name);
   }
 }
 
