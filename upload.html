@@ -56,6 +56,11 @@ button {
 
 <body>
 
+<!-- ⭐ 新增：返回按鈕 -->
+<button onclick="goBack()" style="margin-bottom:10px;">
+⬅ 返回教材清單
+</button>
+
 <h2>📚 建立教材</h2>
 
 <input id="title" placeholder="輸入教材名稱（例如：CVC short a）" 
@@ -81,6 +86,11 @@ style="padding:10px; width:300px; margin-bottom:10px;">
 function getRoomId(){
   const params = new URLSearchParams(window.location.search)
   return params.get("room")
+}
+
+// ⭐ 返回
+function goBack(){
+  window.location.href = "A01-list.html"
 }
 
 // Supabase
@@ -135,7 +145,7 @@ function count(){
 
 let savedRoom = ""
 
-// ⭐ 儲存（目前仍是新增版本）
+// ⭐ 儲存
 async function save(){
 
   const title = document.getElementById("title").value.trim()
@@ -214,7 +224,7 @@ function goGame(){
   window.location.href = "game.html?room="+savedRoom
 }
 
-/* ⭐⭐ 關鍵：載入舊教材（編輯模式）⭐⭐ */
+// ⭐ 載入舊教材（編輯模式）
 window.onload = async function(){
 
   const roomId = getRoomId()
@@ -227,10 +237,8 @@ window.onload = async function(){
       .eq("room", roomId)
       .single()
 
-    // 填標題
     document.getElementById("title").value = data.title || ""
 
-    // 填內容
     data.content.forEach((item,i)=>{
       document.getElementById("word"+i).value = item.word
       document.getElementById("img"+i).src = item.image
