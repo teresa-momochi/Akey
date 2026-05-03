@@ -91,6 +91,7 @@ async function load(){
       </div>
       <div>
         <button onclick="play('${room.room}')">開始</button>
+        <button onclick="del('${room.id}')">刪除</button>
       </div>
     `
 
@@ -111,6 +112,27 @@ function goMenu(){
 // 新增教材
 function goUpload(){
   window.location.href = "upload.html"
+}
+
+// ⭐ 新增：刪除功能（只加這段）
+async function del(id){
+
+  const ok = confirm("確定要刪除這筆教材嗎？")
+
+  if(!ok) return
+
+  const { error } = await client
+    .from("rooms")
+    .delete()
+    .eq("id", id)
+
+  if(error){
+    alert("刪除失敗")
+    console.error(error)
+  }else{
+    alert("已刪除")
+    load()
+  }
 }
 
 load()
